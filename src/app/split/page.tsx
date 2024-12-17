@@ -33,17 +33,18 @@ import {
 type ColumnDefinition = {
   align: string;
   width: string;
+  minWidth?: string;
 };
 
 const columnDefinitions: Record<string, ColumnDefinition> = {
-  Item: { align: 'left', width: 'auto' },
-  Unit: { align: 'left', width: 'auto' },
-  Quantity: { align: 'right', width: '80px' },
-  Price: { align: 'right', width: '100px' },
-  'Sub-Total': { align: 'right', width: '100px' },
-  Discount: { align: 'right', width: '100px' },
-  Tax: { align: 'right', width: '100px' },
-  Total: { align: 'right', width: 'auto' },
+  Item: { align: 'left', width: 'auto', minWidth: '150px' },
+  Unit: { align: 'left', width: 'auto', minWidth: '100px' },
+  Quantity: { align: 'right', width: '80px', minWidth: '80px' },
+  Price: { align: 'right', width: '100px', minWidth: '100px' },
+  'Sub-Total': { align: 'right', width: '100px', minWidth: '100px' },
+  Discount: { align: 'right', width: '100px', minWidth: '100px' },
+  Tax: { align: 'right', width: '100px', minWidth: '100px' },
+  Total: { align: 'right', width: 'auto', minWidth: '100px' },
   // Add other columns as needed
 };
 
@@ -63,6 +64,12 @@ export default function Split() {
     calculateMemberShare,
     calculateMemberTotal,
   } = useSplitManager();
+
+  columns.forEach((col) => {
+    if (!columnDefinitions[col]) {
+      columnDefinitions[col] = { align: 'right', width: 'auto', minWidth: '100px' };
+    }
+  });
 
   const handleAddColumn = () => {
     const newColumn = prompt('Enter member name:');
@@ -108,7 +115,10 @@ export default function Split() {
                         ? 'text-right'
                         : ''
                     )}
-                    style={{ width: columnDefinitions[col]?.width || 'auto' }}
+                    style={{
+                      width: columnDefinitions[col]?.width || 'auto',
+                      minWidth: columnDefinitions[col]?.minWidth || 'auto',
+                    }}
                   >
                     {col}
                   </TableHead>
