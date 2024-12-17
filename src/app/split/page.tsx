@@ -5,10 +5,10 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,7 @@ const columnDefinitions: Record<string, ColumnDefinition> = {
   Unit: { align: 'left', width: 'auto' },
   Quantity: { align: 'right', width: '80px' },
   Price: { align: 'right', width: '100px' },
-  'Sub-Total': { align: 'right', width: '120px' },
+  'Sub-Total': { align: 'right', width: '100px' },
   Discount: { align: 'right', width: '100px' },
   Tax: { align: 'right', width: '100px' },
   Total: { align: 'right', width: 'auto' },
@@ -61,10 +61,11 @@ export default function Split() {
     calculateTotal,
     calculateAmountRemaining,
     calculateMemberShare,
+    calculateMemberTotal,
   } = useSplitManager();
 
   const handleAddColumn = () => {
-    const newColumn = prompt('Enter column name:');
+    const newColumn = prompt('Enter member name:');
     if (newColumn) {
       addColumn(newColumn);
     }
@@ -77,8 +78,13 @@ export default function Split() {
           <Plus /> Item
         </Button>
         <Button onClick={handleAddColumn} className="flex gap-2 w-fit">
-          <Plus /> Column
+          <Plus /> Member
         </Button>
+        <div className="flex-grow" />
+        <div className="flex gap-2 font-bold">
+          <span>Total:</span>
+          <span>$ {calculateTotal()}</span>
+        </div>
       </div>
       <Table>
         <TableHeader>
@@ -225,8 +231,22 @@ export default function Split() {
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={columns.length + 1}>Total</TableCell>
-            <TableCell className="text-right">${calculateTotal()}</TableCell>
+            {columns.map((col, index) => (
+              <TableCell key={index} className="text-right font-bold">
+                {![
+                  'Item',
+                  'Unit',
+                  'Quantity',
+                  'Price',
+                  'Sub-Total',
+                  'Discount',
+                  'Tax',
+                  'Total',
+                ].includes(col)
+                  ? `$ ${calculateMemberTotal(col)}`
+                  : ''}
+              </TableCell>
+            ))}
           </TableRow>
         </TableFooter>
       </Table>

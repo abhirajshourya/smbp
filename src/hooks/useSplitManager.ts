@@ -77,23 +77,37 @@ const useSplitManager = () => {
   const calculateAmountRemaining = (row: Row) => {
     const subtotal = parseFloat(calculateSubtotal(row));
     const totalSplit = columns.reduce((total, col) => {
-      if (
-        ['item', 'quantity', 'unit', 'price', 'discount', 'tax', 'sub-total'].includes(
-          col.toLowerCase().replace(' ', '')
-        )
-      ) {
+      const predefinedColumns = [
+        'item',
+        'quantity',
+        'unit',
+        'price',
+        'discount',
+        'tax',
+        'sub-total',
+      ];
+      if (predefinedColumns.includes(col.toLowerCase().replace(' ', ''))) {
         return total;
       }
-      return total + (parseFloat(row[col.toLowerCase().replace(' ', '')]) || 0);
+      const splitPercent = parseFloat(row[col.toLowerCase().replace(' ', '')]) || 0;
+      return total + (subtotal * splitPercent) / 100;
     }, 0);
     const amountRemaining = subtotal - totalSplit;
-    return amountRemaining < 0 ? '0.00' : amountRemaining.toFixed(2);
+    return amountRemaining.toFixed(2);
   };
 
   const calculateMemberShare = (row: Row, column: string) => {
     const subtotal = parseFloat(calculateSubtotal(row));
     const percentage = parseFloat(row[column.toLowerCase().replace(' ', '')]) || 0;
     return ((subtotal * percentage) / 100).toFixed(2);
+  };
+
+  const calculateMemberTotal = (column: string) => {
+    return rows
+      .reduce((total, row) => {
+        return total + parseFloat(calculateMemberShare(row, column));
+      }, 0)
+      .toFixed(2);
   };
 
   return {
@@ -109,6 +123,7 @@ const useSplitManager = () => {
     calculateTotal,
     calculateAmountRemaining,
     calculateMemberShare,
+    calculateMemberTotal,
   };
 };
 
