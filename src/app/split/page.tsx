@@ -182,10 +182,7 @@ export default function Split() {
                           </Select>
                         ) : col === 'Sub-Total' ? (
                           '$ ' + calculateSubtotal(row)
-                        ) : col === 'Discount' ||
-                          col === 'Tax' ||
-                          col === 'Quantity' ||
-                          col === 'Price' ? (
+                        ) : col === 'Discount' || col === 'Tax' ? (
                           <div className="flex items-center">
                             <Input
                               type="text"
@@ -208,7 +205,17 @@ export default function Split() {
                                 }}
                                 className={clsx(col === 'Item' ? 'w-full' : 'w-full text-right')}
                               />
-                              <span className="ml-1 text-gray-600">%</span>
+                              {![
+                                'item',
+                                'quantity',
+                                'unit',
+                                'price',
+                                'discount',
+                                'tax',
+                                'sub-total',
+                              ].includes(col.toLowerCase().replace(' ', '')) && (
+                                <span className="ml-1 text-gray-600">%</span>
+                              )}
                             </div>
                             {![
                               'item',
@@ -293,10 +300,7 @@ export default function Split() {
                     </Select>
                   ) : col === 'Sub-Total' ? (
                     '$ ' + calculateSubtotal(row)
-                  ) : col === 'Discount' ||
-                    col === 'Tax' ||
-                    col === 'Quantity' ||
-                    col === 'Price' ? (
+                  ) : col === 'Discount' || col === 'Tax' ? (
                     <div className="flex items-center">
                       <Input
                         type="text"
@@ -319,7 +323,17 @@ export default function Split() {
                           }}
                           className="w-full text-right"
                         />
-                        <span className="ml-1 text-gray-600">%</span>
+                        {![
+                          'item',
+                          'quantity',
+                          'unit',
+                          'price',
+                          'discount',
+                          'tax',
+                          'sub-total',
+                        ].includes(col.toLowerCase().replace(' ', '')) && (
+                          <span className="ml-1 text-gray-600">%</span>
+                        )}
                       </div>
                       {![
                         'item',
