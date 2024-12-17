@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Random Croc',
+  title: 'Split My Bill Plz!',
   description:
     'An Application to split bills with friends with itemization, tax, tip, discounts, and more.',
 };
