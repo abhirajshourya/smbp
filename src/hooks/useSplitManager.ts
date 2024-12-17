@@ -124,6 +124,8 @@ const useSplitManager = () => {
     calculateAmountRemaining,
     calculateMemberShare,
     calculateMemberTotal,
+    setRows,
+    setColumns,
   };
 };
 

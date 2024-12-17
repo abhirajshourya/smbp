@@ -1,6 +1,7 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Trash, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -63,7 +64,26 @@ export default function Split() {
     calculateAmountRemaining,
     calculateMemberShare,
     calculateMemberTotal,
+    setRows,
+    setColumns,
   } = useSplitManager();
+
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  useEffect(() => {
+    const savedData = localStorage.getItem('splitData');
+    if (savedData) {
+      const { savedRows, savedColumns } = JSON.parse(savedData);
+      setRows(savedRows);
+      setColumns(savedColumns);
+      setIsDataLoaded(true);
+    }
+  }, [setRows, setColumns]);
+
+  useEffect(() => {
+    const dataToSave = JSON.stringify({ savedRows: rows, savedColumns: columns });
+    localStorage.setItem('splitData', dataToSave);
+  }, [rows, columns]);
 
   columns.forEach((col) => {
     if (!columnDefinitions[col]) {
@@ -78,15 +98,27 @@ export default function Split() {
     }
   };
 
+  const handleClearData = () => {
+    localStorage.removeItem('splitData');
+    setRows([]);
+    setColumns(['Item', 'Quantity', 'Unit', 'Price', 'Discount', 'Tax', 'Sub-Total']);
+    setIsDataLoaded(false);
+  };
+
   return (
     <div className="p-6 flex flex-col gap-6">
       <div className="flex gap-4 items-center">
         <Button onClick={addRow} className="flex gap-2 w-fit">
-          <Plus /> Add Item
+          <Plus /> Item
         </Button>
         <Button onClick={handleAddColumn} className="flex gap-2 w-fit">
-          <Plus /> Add Member
+          <Plus /> Member
         </Button>
+        {isDataLoaded && (
+          <Button onClick={handleClearData} className="flex gap-2 w-fit">
+            <Trash2 />
+          </Button>
+        )}
         <div className="flex-grow" />
         <div className="flex gap-2 font-bold text-lg">
           <span>Total:</span>
@@ -125,8 +157,11 @@ export default function Split() {
                     </TableHead>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
-                    <ContextMenuItem onClick={() => deleteColumn(col)}>
-                      Delete Column
+                    <ContextMenuItem
+                      className="flex gap-2 items-center"
+                      onClick={() => deleteColumn(col)}
+                    >
+                      <Trash size={16} /> Member
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -245,7 +280,12 @@ export default function Split() {
                   </TableRow>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
-                  <ContextMenuItem onClick={() => deleteRow(row.id)}>Delete Row</ContextMenuItem>
+                  <ContextMenuItem
+                    className="flex gap-2 items-center"
+                    onClick={() => deleteRow(row.id)}
+                  >
+                    <Trash size={16} /> Item
+                  </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
             ))}
@@ -364,8 +404,11 @@ export default function Split() {
                 {calculateAmountRemaining(row)}
               </span>
             </div>
-            <Button onClick={() => deleteRow(row.id)} className="mt-4 w-full">
-              Delete Row
+            <Button
+              onClick={() => deleteRow(row.id)}
+              className="mt-4 w-full flex gap-2 items-center"
+            >
+              <Trash /> Item
             </Button>
           </div>
         ))}
