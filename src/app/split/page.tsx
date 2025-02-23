@@ -164,7 +164,7 @@ export default function Split() {
                 ].includes(col)
             )
             .map((col, index) => (
-              <div key={index} className="flex items-center gap-2">
+              <div key={index} className="flex items-center self-end gap-2">
                 <span className="text-neutral-700">{col}:</span>
                 <span>${calculateMemberTotal(col)}</span>
               </div>
