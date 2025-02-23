@@ -12,6 +12,8 @@ const units = ['kg', 'g', 'lb', 'oz', 'ea'];
 const useSplitManager = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [columns, setColumns] = useState<string[]>(initialColumns);
+  const [globalDiscount, setGlobalDiscount] = useState<number>(0);
+  const [globalTax, setGlobalTax] = useState<number>(0);
 
   const addRow = () => {
     const newRow: Row = { id: uuidv4() };
@@ -110,6 +112,26 @@ const useSplitManager = () => {
       .toFixed(2);
   };
 
+  const applyGlobalDiscount = (discount: number) => {
+    setGlobalDiscount(discount);
+    setRows(
+      rows.map((row) => ({
+        ...row,
+        discount: discount.toString(),
+      }))
+    );
+  };
+
+  const applyGlobalTax = (tax: number) => {
+    setGlobalTax(tax);
+    setRows(
+      rows.map((row) => ({
+        ...row,
+        tax: tax.toString(),
+      }))
+    );
+  };
+
   return {
     rows,
     columns,
@@ -126,6 +148,12 @@ const useSplitManager = () => {
     calculateMemberTotal,
     setRows,
     setColumns,
+    globalDiscount,
+    setGlobalDiscount,
+    applyGlobalDiscount,
+    globalTax,
+    setGlobalTax,
+    applyGlobalTax,
   };
 };
 

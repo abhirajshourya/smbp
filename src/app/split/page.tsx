@@ -67,9 +67,13 @@ export default function Split() {
     calculateMemberTotal,
     setRows,
     setColumns,
+    applyGlobalDiscount,
+    applyGlobalTax,
   } = useSplitManager();
 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [discountInput, setDiscountInput] = useState<string>('');
+  const [taxInput, setTaxInput] = useState<string>('');
 
   useEffect(() => {
     const savedData = localStorage.getItem('splitData');
@@ -106,6 +110,20 @@ export default function Split() {
     setRows([]);
     setColumns(['Item', 'Quantity', 'Unit', 'Price', 'Discount', 'Tax', 'Sub-Total']);
     setIsDataLoaded(false);
+  };
+
+  const handleApplyDiscount = () => {
+    const discount = parseFloat(discountInput);
+    if (!isNaN(discount)) {
+      applyGlobalDiscount(discount);
+    }
+  };
+
+  const handleApplyTax = () => {
+    const tax = parseFloat(taxInput);
+    if (!isNaN(tax)) {
+      applyGlobalTax(tax);
+    }
   };
 
   return (
@@ -151,6 +169,34 @@ export default function Split() {
                 <span>${calculateMemberTotal(col)}</span>
               </div>
             ))}
+        </div>
+        <div className='flex flex-col self-end gap-2 w-64'>
+          <div className="flex justify-end items-center gap-2 w-full">
+            <Input
+              type="text"
+              value={discountInput}
+              onChange={(e) => setDiscountInput(e.target.value)}
+              placeholder="discount"
+              className="text-center w-full"
+            />
+            <span className="text-gray-600">%</span>
+            <Button onClick={handleApplyDiscount} className="flex gap-2 w-fit" variant="outline">
+              Apply Discount
+            </Button>
+          </div>
+          <div className="flex justify-end items-center gap-2 w-full">
+            <Input
+              type="text"
+              value={taxInput}
+              onChange={(e) => setTaxInput(e.target.value)}
+              placeholder="tax"
+              className="text-center w-full"
+            />
+            <span className="text-gray-600">%</span>
+            <Button onClick={handleApplyTax} className="flex gap-2 w-fit" variant="outline">
+              Apply Tax
+            </Button>
+          </div>
         </div>
         <div className="hidden sm:block">
           <Table>
