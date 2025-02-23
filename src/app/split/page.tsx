@@ -30,6 +30,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { CustomNav } from '@/components/CustomNav';
 
 type ColumnDefinition = {
   align: string;
@@ -99,6 +100,8 @@ export default function Split() {
   };
 
   const handleClearData = () => {
+    const res = confirm('Are you sure you want to clear all data?');
+    if (!res) return;
     localStorage.removeItem('splitData');
     setRows([]);
     setColumns(['Item', 'Quantity', 'Unit', 'Price', 'Discount', 'Tax', 'Sub-Total']);
@@ -106,131 +109,142 @@ export default function Split() {
   };
 
   return (
-    <div className="p-6 flex flex-col gap-6">
-      <div className="flex gap-4 items-center">
-        <Button onClick={addRow} className="flex gap-2 w-fit">
-          <Plus /> Item
-        </Button>
-        <Button onClick={handleAddColumn} className="flex gap-2 w-fit">
-          <Plus /> Member
-        </Button>
-        {isDataLoaded && (
-          <Button onClick={handleClearData} className="flex gap-2 w-fit">
-            <Trash2 />
+    <div>
+      <CustomNav />
+      <div className="p-6 flex flex-col text-center min-h-screen gap-4">
+        <div className="flex gap-4 items-center flex-wrap">
+          <Button onClick={addRow} className="flex gap-2 w-fit" variant="outline">
+            <Plus /> Item
           </Button>
-        )}
-        <div className="flex-grow" />
-        <div className="flex gap-2 font-bold text-lg">
-          <span>Total:</span>
-          <span>$ {calculateTotal()}</span>
+          <Button onClick={handleAddColumn} className="flex gap-2 w-fit" variant="outline">
+            <Plus /> Member
+          </Button>
+          {isDataLoaded && (
+            <Button onClick={handleClearData} className="flex gap-2 w-fit" variant="destructive">
+              <Trash2 />
+            </Button>
+          )}
+          <div className="flex-grow md:block hidden" />
+          <div className="flex gap-2 text-2xl w-full md:w-auto">
+            <span>Total:</span>
+            <span className="font-semibold">${calculateTotal()}</span>
+          </div>
         </div>
-      </div>
-      <div className="hidden sm:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col, index) => (
-                <ContextMenu key={index}>
-                  <ContextMenuTrigger asChild>
-                    <TableHead
-                      className={clsx(
-                        columnDefinitions[col]?.align === 'right' ||
-                          ![
-                            'Item',
-                            'Unit',
-                            'Quantity',
-                            'Price',
-                            'Sub-Total',
-                            'Discount',
-                            'Tax',
-                            'Total',
-                          ].includes(col)
-                          ? 'text-right'
-                          : ''
-                      )}
-                      style={{
-                        width: columnDefinitions[col]?.width || 'auto',
-                        minWidth: columnDefinitions[col]?.minWidth || 'auto',
-                      }}
-                    >
-                      {col}
-                    </TableHead>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem
-                      className="flex gap-2 items-center"
-                      onClick={() => deleteColumn(col)}
-                    >
-                      <Trash size={16} /> Member
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              ))}
-              <TableHead className="text-right">Amount Remaining</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <ContextMenu key={row.id}>
-                <ContextMenuTrigger asChild>
-                  <TableRow>
-                    {columns.map((col, colIndex) => (
-                      <TableCell
-                        key={colIndex}
+        <div className="flex flex-col font-semibold gap-2 flex-wrap">
+          {columns
+            .filter(
+              (col) =>
+                ![
+                  'Item',
+                  'Quantity',
+                  'Unit',
+                  'Price',
+                  'Discount',
+                  'Tax',
+                  'Sub-Total',
+                  'Total',
+                ].includes(col)
+            )
+            .map((col, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-neutral-700">{col}:</span>
+                <span>${calculateMemberTotal(col)}</span>
+              </div>
+            ))}
+        </div>
+        <div className="hidden sm:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((col, index) => (
+                  <ContextMenu key={index}>
+                    <ContextMenuTrigger asChild>
+                      <TableHead
                         className={clsx(
                           columnDefinitions[col]?.align === 'right' ||
                             ![
-                              'item',
-                              'unit',
-                              'quantity',
-                              'price',
-                              'sub-total',
-                              'discount',
-                              'tax',
-                              'total',
-                            ].includes(col.toLowerCase().replace(' ', ''))
+                              'Item',
+                              'Unit',
+                              'Quantity',
+                              'Price',
+                              'Sub-Total',
+                              'Discount',
+                              'Tax',
+                              'Total',
+                            ].includes(col)
                             ? 'text-right'
-                            : '',
-                          columnDefinitions[col]?.width
-                            ? `w-[${columnDefinitions[col].width}]`
-                            : 'w-28'
+                            : ''
                         )}
+                        style={{
+                          width: columnDefinitions[col]?.width || 'auto',
+                          minWidth: columnDefinitions[col]?.minWidth || 'auto',
+                        }}
                       >
-                        {col === 'Unit' ? (
-                          <Select
-                            value={row[col.toLowerCase().replace(' ', '')] || 'ea'}
-                            onValueChange={(value) => updateRow(row.id, col, value)}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select unit" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectLabel>Units</SelectLabel>
-                                {units.map((unit) => (
-                                  <SelectItem key={unit} value={unit}>
-                                    {unit}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        ) : col === 'Sub-Total' ? (
-                          '$ ' + calculateSubtotal(row)
-                        ) : col === 'Discount' || col === 'Tax' ? (
-                          <div className="flex items-center">
-                            <Input
-                              type="text"
-                              value={row[col.toLowerCase().replace(' ', '')]}
-                              onChange={(e) => {
-                                updateRow(row.id, col, e.target.value);
-                              }}
-                              className="w-full text-right"
-                            />
-                            <span className="ml-1 text-gray-600">%</span>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col">
+                        {col}
+                      </TableHead>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem
+                        className="flex gap-2 items-center"
+                        onClick={() => deleteColumn(col)}
+                      >
+                        <Trash size={16} /> Member
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ))}
+                <TableHead className="text-right">Amount Remaining</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <ContextMenu key={row.id}>
+                  <ContextMenuTrigger asChild>
+                    <TableRow>
+                      {columns.map((col, colIndex) => (
+                        <TableCell
+                          key={colIndex}
+                          className={clsx(
+                            columnDefinitions[col]?.align === 'right' ||
+                              ![
+                                'item',
+                                'unit',
+                                'quantity',
+                                'price',
+                                'sub-total',
+                                'discount',
+                                'tax',
+                                'total',
+                              ].includes(col.toLowerCase().replace(' ', ''))
+                              ? 'text-right'
+                              : '',
+                            columnDefinitions[col]?.width
+                              ? `w-[${columnDefinitions[col].width}]`
+                              : 'w-28'
+                          )}
+                        >
+                          {col === 'Unit' ? (
+                            <Select
+                              value={row[col.toLowerCase().replace(' ', '')] || 'ea'}
+                              onValueChange={(value) => updateRow(row.id, col, value)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select unit" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectLabel>Units</SelectLabel>
+                                  {units.map((unit) => (
+                                    <SelectItem key={unit} value={unit}>
+                                      {unit}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          ) : col === 'Sub-Total' ? (
+                            '$ ' + calculateSubtotal(row)
+                          ) : col === 'Discount' || col === 'Tax' ? (
                             <div className="flex items-center">
                               <Input
                                 type="text"
@@ -238,8 +252,33 @@ export default function Split() {
                                 onChange={(e) => {
                                   updateRow(row.id, col, e.target.value);
                                 }}
-                                className={clsx(col === 'Item' ? 'w-full' : 'w-full text-right')}
+                                className="w-full text-right"
                               />
+                              <span className="ml-1 text-gray-600">%</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col">
+                              <div className="flex items-center">
+                                <Input
+                                  type="text"
+                                  value={row[col.toLowerCase().replace(' ', '')]}
+                                  onChange={(e) => {
+                                    updateRow(row.id, col, e.target.value);
+                                  }}
+                                  className={clsx(col === 'Item' ? 'w-full' : 'w-full text-right')}
+                                />
+                                {![
+                                  'item',
+                                  'quantity',
+                                  'unit',
+                                  'price',
+                                  'discount',
+                                  'tax',
+                                  'sub-total',
+                                ].includes(col.toLowerCase().replace(' ', '')) && (
+                                  <span className="ml-1 text-gray-600">%</span>
+                                )}
+                              </div>
                               {![
                                 'item',
                                 'quantity',
@@ -249,111 +288,91 @@ export default function Split() {
                                 'tax',
                                 'sub-total',
                               ].includes(col.toLowerCase().replace(' ', '')) && (
-                                <span className="ml-1 text-gray-600">%</span>
+                                <span className="text-gray-600 text-sm mt-1 text-right">
+                                  $ {calculateMemberShare(row, col)}
+                                </span>
                               )}
                             </div>
-                            {![
-                              'item',
-                              'quantity',
-                              'unit',
-                              'price',
-                              'discount',
-                              'tax',
-                              'sub-total',
-                            ].includes(col.toLowerCase().replace(' ', '')) && (
-                              <span className="text-gray-600 text-sm mt-1 text-right">
-                                $ {calculateMemberShare(row, col)}
-                              </span>
-                            )}
-                          </div>
+                          )}
+                        </TableCell>
+                      ))}
+                      <TableCell
+                        className={clsx(
+                          'text-right',
+                          Number(calculateAmountRemaining(row)) < 0 ? 'text-red-500' : ''
                         )}
+                      >
+                        {calculateAmountRemaining(row)}
                       </TableCell>
-                    ))}
-                    <TableCell
-                      className={clsx(
-                        'text-right',
-                        Number(calculateAmountRemaining(row)) < 0 ? 'text-red-500' : ''
-                      )}
+                    </TableRow>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem
+                      className="flex gap-2 items-center"
+                      onClick={() => deleteRow(row.id)}
                     >
-                      {calculateAmountRemaining(row)}
-                    </TableCell>
-                  </TableRow>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem
-                    className="flex gap-2 items-center"
-                    onClick={() => deleteRow(row.id)}
-                  >
-                    <Trash size={16} /> Item
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
-            ))}
-          </TableBody>
-          <TableFooter>
-            <TableRow>
-              {columns.map((col, index) => (
-                <TableCell key={index} className="text-right font-bold">
-                  {![
-                    'Item',
-                    'Unit',
-                    'Quantity',
-                    'Price',
-                    'Sub-Total',
-                    'Discount',
-                    'Tax',
-                    'Total',
-                  ].includes(col)
-                    ? `$ ${calculateMemberTotal(col)}`
-                    : ''}
-                </TableCell>
+                      <Trash size={16} /> Item
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))}
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </div>
-      <div className="block sm:hidden">
-        {rows.map((row) => (
-          <div key={row.id} className="border rounded-lg p-4 mb-4">
-            {columns.map((col, colIndex) => (
-              <div key={colIndex} className="flex justify-between mb-2">
-                <span className="font-medium">{col}:</span>
-                <span className={clsx('w-1/2', col === 'Sub-Total' ? 'text-right' : '')}>
-                  {col === 'Unit' ? (
-                    <Select
-                      value={row[col.toLowerCase().replace(' ', '')] || 'ea'}
-                      onValueChange={(value) => updateRow(row.id, col, value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Units</SelectLabel>
-                          {units.map((unit) => (
-                            <SelectItem key={unit} value={unit}>
-                              {unit}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  ) : col === 'Sub-Total' ? (
-                    '$ ' + calculateSubtotal(row)
-                  ) : col === 'Discount' || col === 'Tax' ? (
-                    <div className="flex items-center">
-                      <Input
-                        type="text"
-                        value={row[col.toLowerCase().replace(' ', '')]}
-                        onChange={(e) => {
-                          updateRow(row.id, col, e.target.value);
-                        }}
-                        className="w-full text-right"
-                      />
-                      <span className="ml-1 text-gray-600">%</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col">
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                {columns.map((col, index) => (
+                  <TableCell key={index} className="text-right font-bold">
+                    {![
+                      'Item',
+                      'Unit',
+                      'Quantity',
+                      'Price',
+                      'Sub-Total',
+                      'Discount',
+                      'Tax',
+                      'Total',
+                    ].includes(col)
+                      ? `$ ${calculateMemberTotal(col)}`
+                      : ''}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </div>
+        <div className="block sm:hidden">
+          {rows.length === 0 && (
+            <div>
+              <p className="text-neutral-600">Start by adding an item</p>
+            </div>
+          )}
+          {rows.map((row) => (
+            <div key={row.id} className="border rounded-lg p-4 mb-4">
+              {columns.map((col, colIndex) => (
+                <div key={colIndex} className="flex justify-between mb-2">
+                  <span className="font-medium">{col}:</span>
+                  <span className={clsx('w-1/2', col === 'Sub-Total' ? 'text-right' : '')}>
+                    {col === 'Unit' ? (
+                      <Select
+                        value={row[col.toLowerCase().replace(' ', '')] || 'ea'}
+                        onValueChange={(value) => updateRow(row.id, col, value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Units</SelectLabel>
+                            {units.map((unit) => (
+                              <SelectItem key={unit} value={unit}>
+                                {unit}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    ) : col === 'Sub-Total' ? (
+                      '$ ' + calculateSubtotal(row)
+                    ) : col === 'Discount' || col === 'Tax' ? (
                       <div className="flex items-center">
                         <Input
                           type="text"
@@ -363,6 +382,31 @@ export default function Split() {
                           }}
                           className="w-full text-right"
                         />
+                        <span className="ml-1 text-gray-600">%</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col">
+                        <div className="flex items-center">
+                          <Input
+                            type="text"
+                            value={row[col.toLowerCase().replace(' ', '')]}
+                            onChange={(e) => {
+                              updateRow(row.id, col, e.target.value);
+                            }}
+                            className="w-full text-right"
+                          />
+                          {![
+                            'item',
+                            'quantity',
+                            'unit',
+                            'price',
+                            'discount',
+                            'tax',
+                            'sub-total',
+                          ].includes(col.toLowerCase().replace(' ', '')) && (
+                            <span className="ml-1 text-gray-600">%</span>
+                          )}
+                        </div>
                         {![
                           'item',
                           'quantity',
@@ -372,46 +416,35 @@ export default function Split() {
                           'tax',
                           'sub-total',
                         ].includes(col.toLowerCase().replace(' ', '')) && (
-                          <span className="ml-1 text-gray-600">%</span>
+                          <span className="text-gray-600 text-sm mt-1 text-right">
+                            $ {calculateMemberShare(row, col)}
+                          </span>
                         )}
                       </div>
-                      {![
-                        'item',
-                        'quantity',
-                        'unit',
-                        'price',
-                        'discount',
-                        'tax',
-                        'sub-total',
-                      ].includes(col.toLowerCase().replace(' ', '')) && (
-                        <span className="text-gray-600 text-sm mt-1 text-right">
-                          $ {calculateMemberShare(row, col)}
-                        </span>
-                      )}
-                    </div>
+                    )}
+                  </span>
+                </div>
+              ))}
+              <div className="flex justify-between mt-2">
+                <span className="font-medium">Amount Remaining:</span>
+                <span
+                  className={clsx(
+                    'text-right',
+                    Number(calculateAmountRemaining(row)) < 0 ? 'text-red-500' : ''
                   )}
+                >
+                  {calculateAmountRemaining(row)}
                 </span>
               </div>
-            ))}
-            <div className="flex justify-between mt-2">
-              <span className="font-medium">Amount Remaining:</span>
-              <span
-                className={clsx(
-                  'text-right',
-                  Number(calculateAmountRemaining(row)) < 0 ? 'text-red-500' : ''
-                )}
+              <Button
+                onClick={() => deleteRow(row.id)}
+                className="mt-4 w-full flex gap-2 items-center"
               >
-                {calculateAmountRemaining(row)}
-              </span>
+                <Trash /> Item
+              </Button>
             </div>
-            <Button
-              onClick={() => deleteRow(row.id)}
-              className="mt-4 w-full flex gap-2 items-center"
-            >
-              <Trash /> Item
-            </Button>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
