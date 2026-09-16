@@ -29,7 +29,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import type { Row } from '@/hooks/useSplitManager';
+import { type Row, isMemberColumn, toKey } from '@/hooks/useSplitManager';
 
 type ColumnDefinition = {
   align: string;
@@ -48,29 +48,6 @@ const baseColumnDefinitions: Record<string, ColumnDefinition> = {
   Total: { align: 'right', width: 'auto', minWidth: '100px' },
 };
 
-const predefinedShares = [
-  { name: '--', value: 0 },
-  { name: '1/5', value: 20 },
-  { name: '1/4', value: 25 },
-  { name: '1/3', value: 33.33 },
-  { name: '1/2', value: 50 },
-  { name: '2/3', value: 66.67 },
-  { name: '3/4', value: 75 },
-  { name: '4/5', value: 80 },
-  { name: '1', value: 100 },
-];
-
-const predefinedColumns = [
-  'item',
-  'unit',
-  'quantity',
-  'price',
-  'sub-total',
-  'discount',
-  'tax',
-  'total',
-];
-
 type BillTableProps = {
   rows: Row[];
   columns: string[];
@@ -78,10 +55,64 @@ type BillTableProps = {
   updateRow: (rowId: string, column: string, value: string) => void;
   deleteRow: (rowId: string) => void;
   deleteColumn: (column: string) => void;
+  toggleMemberInclusion: (rowId: string, memberKey: string) => void;
   calculateSubtotal: (row: Row) => string;
   calculateAmountRemaining: (row: Row) => string;
   calculateMemberShare: (row: Row, column: string) => string;
   calculateMemberTotal: (column: string) => string;
+};
+
+// A member's cell defaults to a click-to-toggle chip that auto-splits the row
+// evenly across whoever's included; "custom" mode reveals the raw % input for
+// an exact uneven share.
+const MemberCell = ({
+  row,
+  col,
+  isCustomSplit,
+  onToggle,
+  onCustomChange,
+  calculateMemberShare,
+}: {
+  row: Row;
+  col: string;
+  isCustomSplit: boolean;
+  onToggle: () => void;
+  onCustomChange: (value: string) => void;
+  calculateMemberShare: (row: Row, column: string) => string;
+}) => {
+  const key = toKey(col);
+  const percentage = parseFloat(row[key]) || 0;
+  const isIncluded = percentage > 0;
+
+  if (isCustomSplit) {
+    return (
+      <div className="flex items-center gap-2 justify-end">
+        <Input
+          type="text"
+          inputMode="decimal"
+          value={row[key]}
+          onChange={(e) => onCustomChange(e.target.value)}
+          className="w-16 text-right"
+        />
+        <span className="text-muted-foreground">%</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={clsx(
+        'w-full rounded-md px-3 py-1.5 text-sm font-medium transition-colors border',
+        isIncluded
+          ? 'bg-primary/10 text-primary border-primary/30'
+          : 'bg-transparent text-muted-foreground border-input hover:bg-accent'
+      )}
+    >
+      $ {calculateMemberShare(row, col)}
+    </button>
+  );
 };
 
 export const BillTable = ({
@@ -91,13 +122,14 @@ export const BillTable = ({
   updateRow,
   deleteRow,
   deleteColumn,
+  toggleMemberInclusion,
   calculateSubtotal,
   calculateAmountRemaining,
   calculateMemberShare,
   calculateMemberTotal,
 }: BillTableProps) => {
-  const [isDropdown, setIsDropdown] = useState<boolean>(false);
-  const toggleInputType = () => setIsDropdown(!isDropdown);
+  const [isCustomSplit, setIsCustomSplit] = useState<boolean>(false);
+  const toggleSplitMode = () => setIsCustomSplit(!isCustomSplit);
 
   const columnDefinitions = useMemo(() => {
     const definitions = { ...baseColumnDefinitions };
@@ -112,6 +144,12 @@ export const BillTable = ({
   return (
     <>
       <div className="hidden sm:block">
+        <div className="flex justify-end mb-2">
+          <Button onClick={toggleSplitMode} variant="ghost" size="sm" className="gap-1.5">
+            <ArrowRightLeft size={14} />
+            {isCustomSplit ? 'Custom %' : 'Quick split'}
+          </Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -120,8 +158,7 @@ export const BillTable = ({
                   <ContextMenuTrigger asChild>
                     <TableHead
                       className={clsx(
-                        columnDefinitions[col]?.align === 'right' ||
-                          !predefinedColumns.includes(col.toLowerCase().replace(' ', ''))
+                        columnDefinitions[col]?.align === 'right' || isMemberColumn(col)
                           ? 'text-right'
                           : '',
                         'font-semibold',
@@ -157,8 +194,7 @@ export const BillTable = ({
                       <TableCell
                         key={colIndex}
                         className={clsx(
-                          columnDefinitions[col]?.align === 'right' ||
-                            !predefinedColumns.includes(col.toLowerCase().replace(' ', ''))
+                          columnDefinitions[col]?.align === 'right' || isMemberColumn(col)
                             ? 'text-right'
                             : '',
                           columnDefinitions[col]?.width
@@ -168,7 +204,7 @@ export const BillTable = ({
                       >
                         {col === 'Unit' ? (
                           <Select
-                            value={row[col.toLowerCase().replace(' ', '')] || 'ea'}
+                            value={row[toKey(col)] || 'ea'}
                             onValueChange={(value) => updateRow(row.id, col, value)}
                           >
                             <SelectTrigger className="w-full">
@@ -195,7 +231,8 @@ export const BillTable = ({
                             <span className="text-muted-foreground">$</span>
                             <Input
                               type="text"
-                              value={row[col.toLowerCase().replace(' ', '')]}
+                              inputMode="decimal"
+                              value={row[toKey(col)]}
                               onChange={(e) => updateRow(row.id, col, e.target.value)}
                               className="w-20 text-right"
                             />
@@ -204,7 +241,8 @@ export const BillTable = ({
                           <div className="flex items-center gap-2 pl-4">
                             <Input
                               type="text"
-                              value={row[col.toLowerCase().replace(' ', '')]}
+                              inputMode="decimal"
+                              value={row[toKey(col)]}
                               onChange={(e) => {
                                 updateRow(row.id, col, e.target.value);
                               }}
@@ -212,74 +250,24 @@ export const BillTable = ({
                             />
                             <span className="text-muted-foreground">%</span>
                           </div>
-                        ) : (
-                          <div>
-                            <div className="flex flex-col">
-                              {['item', 'quantity', 'unit', 'discount', 'tax', 'sub-total'].includes(
-                                col.toLowerCase().replace(' ', '')
-                              ) && (
-                                <Input
-                                  type="text"
-                                  value={row[col.toLowerCase().replace(' ', '')]}
-                                  onChange={(e) => updateRow(row.id, col, e.target.value)}
-                                  className="w-full"
-                                />
-                              )}
-                            </div>
-                            <div className="flex flex-col">
-                              {!predefinedColumns.includes(col.toLowerCase().replace(' ', '')) && (
-                                <div className="flex items-center gap-2 justify-end">
-                                  <div className="flex flex-col gap-2 justify-center">
-                                    {isDropdown ? (
-                                      <Select
-                                        value={row[col.toLowerCase().replace(' ', '')]}
-                                        onValueChange={(value) => updateRow(row.id, col, value)}
-                                      >
-                                        <SelectTrigger className="w-20">
-                                          <SelectValue placeholder="--" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectGroup>
-                                            <SelectLabel>Shares</SelectLabel>
-                                            {predefinedShares.map((share) => (
-                                              <SelectItem
-                                                key={share.name}
-                                                value={share.value?.toString() || '100'}
-                                              >
-                                                {share.name}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectGroup>
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
-                                      <div className="flex items-center gap-2">
-                                        <Input
-                                          type="text"
-                                          value={row[col.toLowerCase().replace(' ', '')]}
-                                          onChange={(e) => updateRow(row.id, col, e.target.value)}
-                                          className="w-16 text-right"
-                                        />
-                                        <span className="text-muted-foreground">%</span>
-                                      </div>
-                                    )}
-                                    <span className="text-muted-foreground self-start px-2">
-                                      $ {calculateMemberShare(row, col)}
-                                    </span>
-                                  </div>
-                                  <Button
-                                    onClick={toggleInputType}
-                                    variant="outline"
-                                    size="icon"
-                                    className="p-2"
-                                  >
-                                    <ArrowRightLeft size={16} />
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                        ) : ['item', 'quantity'].includes(toKey(col)) ? (
+                          <Input
+                            type="text"
+                            inputMode={toKey(col) === 'quantity' ? 'decimal' : undefined}
+                            value={row[toKey(col)]}
+                            onChange={(e) => updateRow(row.id, col, e.target.value)}
+                            className="w-full"
+                          />
+                        ) : isMemberColumn(col) ? (
+                          <MemberCell
+                            row={row}
+                            col={col}
+                            isCustomSplit={isCustomSplit}
+                            onToggle={() => toggleMemberInclusion(row.id, toKey(col))}
+                            onCustomChange={(value) => updateRow(row.id, col, value)}
+                            calculateMemberShare={calculateMemberShare}
+                          />
+                        ) : null}
                       </TableCell>
                     ))}
                     <TableCell
@@ -307,11 +295,7 @@ export const BillTable = ({
             <TableRow>
               {columns.map((col, index) => (
                 <TableCell key={index} className="text-right font-bold">
-                  {!['Item', 'Unit', 'Quantity', 'Price', 'Sub-Total', 'Discount', 'Tax', 'Total'].includes(
-                    col
-                  )
-                    ? `$ ${calculateMemberTotal(col)}`
-                    : ''}
+                  {isMemberColumn(col) ? `$ ${calculateMemberTotal(col)}` : ''}
                 </TableCell>
               ))}
             </TableRow>
@@ -324,6 +308,12 @@ export const BillTable = ({
         </div>
       )}
       <div className="block sm:hidden">
+        <div className="flex justify-end mb-2">
+          <Button onClick={toggleSplitMode} variant="ghost" size="sm" className="gap-1.5">
+            <ArrowRightLeft size={14} />
+            {isCustomSplit ? 'Custom %' : 'Quick split'}
+          </Button>
+        </div>
         {rows.map((row) => (
           <div key={row.id} className="border-2 rounded-lg p-4 mb-4">
             {columns.map((col, colIndex) => (
@@ -348,7 +338,7 @@ export const BillTable = ({
                 <div className={clsx('w-1/2', col === 'Sub-Total' ? 'text-right' : '')}>
                   {col === 'Unit' ? (
                     <Select
-                      value={row[col.toLowerCase().replace(' ', '')] || 'ea'}
+                      value={row[toKey(col)] || 'ea'}
                       onValueChange={(value) => updateRow(row.id, col, value)}
                     >
                       <SelectTrigger className="w-full">
@@ -370,7 +360,8 @@ export const BillTable = ({
                       <span className="text-muted-foreground text-sm">$</span>
                       <Input
                         type="text"
-                        value={row[col.toLowerCase().replace(' ', '')]}
+                        inputMode="decimal"
+                        value={row[toKey(col)]}
                         onChange={(e) => updateRow(row.id, col, e.target.value)}
                         className="w-full"
                       />
@@ -381,7 +372,8 @@ export const BillTable = ({
                     <div className="flex items-center">
                       <Input
                         type="text"
-                        value={row[col.toLowerCase().replace(' ', '')]}
+                        inputMode="decimal"
+                        value={row[toKey(col)]}
                         onChange={(e) => {
                           updateRow(row.id, col, e.target.value);
                         }}
@@ -389,80 +381,24 @@ export const BillTable = ({
                       />
                       <span className="ml-1 text-muted-foreground">%</span>
                     </div>
-                  ) : (
-                    <div>
-                      <div className="flex flex-col">
-                        {[
-                          'item',
-                          'quantity',
-                          'unit',
-                          'price',
-                          'discount',
-                          'tax',
-                          'sub-total',
-                        ].includes(col.toLowerCase().replace(' ', '')) && (
-                          <Input
-                            type="text"
-                            value={row[col.toLowerCase().replace(' ', '')]}
-                            onChange={(e) => updateRow(row.id, col, e.target.value)}
-                            className="w-full"
-                          />
-                        )}
-                      </div>
-                      <div className="flex flex-col my-1">
-                        {!predefinedColumns.includes(col.toLowerCase().replace(' ', '')) && (
-                          <div className="flex flex-col">
-                            <div className="flex items-center justify-end gap-2">
-                              {isDropdown ? (
-                                <Select
-                                  value={row[col.toLowerCase().replace(' ', '')]}
-                                  onValueChange={(value) => updateRow(row.id, col, value)}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="--" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectGroup>
-                                      <SelectLabel>Shares</SelectLabel>
-                                      {predefinedShares.map((share) => (
-                                        <SelectItem
-                                          key={share.name}
-                                          value={share.value?.toString() || '1/2'}
-                                        >
-                                          {share.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectGroup>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <div className="flex gap-2 items-center">
-                                  <Input
-                                    type="text"
-                                    value={row[col.toLowerCase().replace(' ', '')]}
-                                    onChange={(e) => updateRow(row.id, col, e.target.value)}
-                                    className="w-full text-right"
-                                  />
-                                  <span className="text-muted-foreground">%</span>
-                                </div>
-                              )}
-                              <Button
-                                onClick={toggleInputType}
-                                variant="outline"
-                                size="icon"
-                                className="p-2"
-                              >
-                                <ArrowRightLeft size={16} />
-                              </Button>
-                            </div>
-                            <span className="text-muted-foreground text-sm mt-1 mx-2 self-start">
-                              $ {calculateMemberShare(row, col)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  ) : ['item', 'quantity'].includes(toKey(col)) ? (
+                    <Input
+                      type="text"
+                      inputMode={toKey(col) === 'quantity' ? 'decimal' : undefined}
+                      value={row[toKey(col)]}
+                      onChange={(e) => updateRow(row.id, col, e.target.value)}
+                      className="w-full"
+                    />
+                  ) : isMemberColumn(col) ? (
+                    <MemberCell
+                      row={row}
+                      col={col}
+                      isCustomSplit={isCustomSplit}
+                      onToggle={() => toggleMemberInclusion(row.id, toKey(col))}
+                      onCustomChange={(value) => updateRow(row.id, col, value)}
+                      calculateMemberShare={calculateMemberShare}
+                    />
+                  ) : null}
                 </div>
               </div>
             ))}

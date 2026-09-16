@@ -18,6 +18,7 @@ export default function Split() {
     addColumn,
     deleteColumn,
     updateRow,
+    toggleMemberInclusion,
     calculateSubtotal,
     calculateTotal,
     calculateAmountRemaining,
@@ -32,6 +33,8 @@ export default function Split() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [discountInput, setDiscountInput] = useState<string>('');
   const [taxInput, setTaxInput] = useState<string>('');
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
 
   useEffect(() => {
     const savedData = localStorage.getItem('splitData');
@@ -48,11 +51,18 @@ export default function Split() {
     localStorage.setItem('splitData', dataToSave);
   }, [rows, columns]);
 
-  const handleAddColumn = () => {
-    const newColumn = prompt('Enter member name:');
-    if (newColumn) {
-      addColumn(newColumn);
+  const handleConfirmAddMember = () => {
+    const name = newMemberName.trim();
+    if (name) {
+      addColumn(name);
     }
+    setNewMemberName('');
+    setIsAddingMember(false);
+  };
+
+  const handleCancelAddMember = () => {
+    setNewMemberName('');
+    setIsAddingMember(false);
   };
 
   const handleClearData = () => {
@@ -86,9 +96,33 @@ export default function Split() {
           <Button onClick={addRow} className="flex gap-2 w-fit" variant="outline">
             <Plus /> Item
           </Button>
-          <Button onClick={handleAddColumn} className="flex gap-2 w-fit" variant="outline">
-            <Plus /> Member
-          </Button>
+          {isAddingMember ? (
+            <div className="flex items-center gap-2">
+              <Input
+                autoFocus
+                type="text"
+                value={newMemberName}
+                onChange={(e) => setNewMemberName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmAddMember();
+                  if (e.key === 'Escape') handleCancelAddMember();
+                }}
+                placeholder="Member name"
+                className="w-40"
+              />
+              <Button onClick={handleConfirmAddMember} className="p-2" variant="outline">
+                <Check size={16} />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={() => setIsAddingMember(true)}
+              className="flex gap-2 w-fit"
+              variant="outline"
+            >
+              <Plus /> Member
+            </Button>
+          )}
           {isDataLoaded && (
             <Button onClick={handleClearData} className="flex gap-2 w-fit" variant="destructive">
               <Trash2 />
@@ -121,6 +155,7 @@ export default function Split() {
             <span className="text-muted-foreground w-24 text-right">Discount:</span>
             <Input
               type="text"
+              inputMode="decimal"
               value={discountInput}
               onChange={(e) => setDiscountInput(e.target.value)}
               placeholder="25"
@@ -135,6 +170,7 @@ export default function Split() {
             <span className="text-muted-foreground w-24 text-right">Tax:</span>
             <Input
               type="text"
+              inputMode="decimal"
               value={taxInput}
               onChange={(e) => setTaxInput(e.target.value)}
               placeholder="13"
@@ -153,6 +189,7 @@ export default function Split() {
           updateRow={updateRow}
           deleteRow={deleteRow}
           deleteColumn={deleteColumn}
+          toggleMemberInclusion={toggleMemberInclusion}
           calculateSubtotal={calculateSubtotal}
           calculateAmountRemaining={calculateAmountRemaining}
           calculateMemberShare={calculateMemberShare}
