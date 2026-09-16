@@ -1,5 +1,15 @@
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Calculator, MessageSquare, Receipt, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  Calculator,
+  Gift,
+  MessageSquare,
+  Plane,
+  Receipt,
+  Sparkles,
+  UtensilsCrossed,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CustomNav } from '@/components/CustomNav';
@@ -28,13 +38,69 @@ const features = [
   },
 ];
 
+const steps = [
+  {
+    title: 'Add your items',
+    description: 'Type in what was ordered, with quantity, price, discount, and tax per line.',
+  },
+  {
+    title: 'Add your people',
+    description: 'Tap a name on any item to include them — the share divides evenly, automatically.',
+  },
+  {
+    title: 'See who owes what',
+    description: 'Totals update instantly as you go. No manual math, no arguments over the tip.',
+  },
+];
+
+const useCases = [
+  { icon: UtensilsCrossed, label: 'Restaurant dinners' },
+  { icon: Users, label: 'Roommate groceries' },
+  { icon: Plane, label: 'Trip expenses' },
+  { icon: Gift, label: 'Group gifts' },
+];
+
+const faqs = [
+  {
+    question: 'Do I need to create an account?',
+    answer:
+      'No. Split My Bill Plz works instantly in your browser — no sign-up, no email, nothing to install.',
+  },
+  {
+    question: 'Is my data private?',
+    answer:
+      'Everything is stored locally in your browser. Nothing about your bill is sent to or kept on a server.',
+  },
+  {
+    question: 'Is it really free?',
+    answer: 'Yes — free forever. No premium tier, no usage limits, no credit card required.',
+  },
+  {
+    question: 'What about the AI features?',
+    answer:
+      'Receipt scanning and chat-based edits are on the way, powered by a shared AI budget — so they’ll stay free too, with a fair monthly cap per person.',
+  },
+];
+
+function GradientBackdrop() {
+  return (
+    <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+      <div className="absolute -top-24 -left-24 w-[32rem] h-[32rem] rounded-full bg-primary/30 blur-[100px]" />
+      <div className="absolute top-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-violet-400/30 blur-[100px]" />
+      <div className="absolute top-[60rem] left-1/3 w-[26rem] h-[26rem] rounded-full bg-sky-300/25 blur-[100px]" />
+    </div>
+  );
+}
+
 export default function Home() {
   return (
-    <div>
+    <div className="relative">
+      <GradientBackdrop />
+      <div className="relative z-10">
       <CustomNav />
       <div className="flex flex-col items-center text-center max-w-5xl mx-auto px-6">
         <section className="flex flex-col items-center gap-6 pt-20 md:pt-28 pb-16 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-700">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 rounded-full px-3 py-1">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-white/40 backdrop-blur-md border border-white/40 rounded-full px-3 py-1 shadow-sm shadow-black/[0.02]">
             <Sparkles size={13} />
             Free forever, no sign-up
           </span>
@@ -64,7 +130,7 @@ export default function Home() {
           id="preview"
           className="w-full pb-24 scroll-mt-24 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-1000"
         >
-          <div className="rounded-2xl border border-border bg-card p-2 shadow-xl">
+          <div className="rounded-2xl border border-white/30 bg-white/30 backdrop-blur-xl p-2 shadow-2xl shadow-black/[0.03]">
             <Image
               src="/screenshot-split-desktop.png"
               alt="An itemized bill in Split My Bill Plz, showing three items split between three people with each share calculated automatically"
@@ -76,9 +142,30 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid sm:grid-cols-3 gap-x-8 gap-y-10 pb-24 w-full text-left">
+        <section className="w-full pb-24">
+          <h2 className="text-3xl font-semibold tracking-tight mb-12">How it works</h2>
+          <div className="grid sm:grid-cols-3 gap-6 text-left">
+            {steps.map(({ title, description }, index) => (
+              <div
+                key={title}
+                className="flex flex-col gap-3 rounded-xl border border-white/30 bg-white/30 backdrop-blur-lg p-6 shadow-sm shadow-black/[0.02]"
+              >
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
+                  {index + 1}
+                </div>
+                <h3 className="font-semibold text-base">{title}</h3>
+                <p className="text-sm text-muted-foreground">{description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="grid sm:grid-cols-3 gap-6 pb-24 w-full text-left">
           {features.map(({ icon: Icon, title, description, badge }) => (
-            <div key={title} className="flex flex-col gap-3">
+            <div
+              key={title}
+              className="flex flex-col gap-3 rounded-xl border border-white/30 bg-white/30 backdrop-blur-lg p-6 shadow-sm shadow-black/[0.02]"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 text-primary">
                   <Icon size={20} />
@@ -95,6 +182,42 @@ export default function Home() {
           ))}
         </section>
 
+        <section className="w-full pb-24">
+          <h2 className="text-3xl font-semibold tracking-tight mb-12">Built for every kind of bill</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {useCases.map(({ icon: Icon, label }) => (
+              <div
+                key={label}
+                className="flex flex-col items-center gap-3 rounded-xl border border-white/30 bg-white/30 backdrop-blur-lg p-6 shadow-sm shadow-black/[0.02]"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 text-primary">
+                  <Icon size={20} />
+                </div>
+                <span className="text-sm font-medium">{label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="w-full max-w-2xl pb-24 text-left">
+          <h2 className="text-3xl font-semibold tracking-tight mb-8 text-center">
+            Frequently asked questions
+          </h2>
+          <div className="flex flex-col divide-y divide-white/30 rounded-2xl border border-white/30 bg-white/30 backdrop-blur-lg px-6 shadow-sm shadow-black/[0.02]">
+            {faqs.map(({ question, answer }) => (
+              <details key={question} className="group py-5">
+                <summary className="flex items-center justify-between gap-4 font-medium cursor-pointer list-none">
+                  {question}
+                  <span className="text-muted-foreground transition-transform group-open:rotate-45 shrink-0">
+                    +
+                  </span>
+                </summary>
+                <p className="text-sm text-muted-foreground mt-3">{answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         <section className="flex flex-col items-center gap-4 pb-24">
           <h2 className="text-2xl font-semibold tracking-tight">Ready to split your first bill?</h2>
           <Link href="/split">
@@ -104,6 +227,7 @@ export default function Home() {
             </Button>
           </Link>
         </section>
+      </div>
       </div>
     </div>
   );
