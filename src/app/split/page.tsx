@@ -92,7 +92,7 @@ export default function Split() {
     <div>
       <CustomNav />
       <div className="p-6 flex flex-col text-center min-h-screen gap-4">
-        <div className="flex gap-4 items-center flex-wrap">
+        <div className="sticky top-[57px] z-40 -mx-6 px-6 py-2 bg-background/90 backdrop-blur-md border-b border-border flex gap-4 items-center flex-wrap">
           <Button onClick={addRow} className="flex gap-2 w-fit" variant="outline">
             <Plus /> Item
           </Button>

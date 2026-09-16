@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Trash, ArrowRightLeft } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -11,7 +11,6 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -104,7 +103,7 @@ const MemberCell = ({
       type="button"
       onClick={onToggle}
       className={clsx(
-        'w-full rounded-md px-3 py-1.5 text-sm font-medium transition-colors border',
+        'w-full rounded-md px-3 py-2.5 sm:py-1.5 text-sm font-medium transition-colors border active:scale-95',
         isIncluded
           ? 'bg-primary/10 text-primary border-primary/30'
           : 'bg-transparent text-muted-foreground border-input hover:bg-accent'
@@ -114,6 +113,38 @@ const MemberCell = ({
     </button>
   );
 };
+
+// A two-segment pill showing both split modes at once, so the active mode
+// and the click target are unambiguous (unlike a single toggle button whose
+// label just names whichever mode is currently active).
+const SplitModeToggle = ({
+  isCustomSplit,
+  onChange,
+}: {
+  isCustomSplit: boolean;
+  onChange: (isCustomSplit: boolean) => void;
+}) => (
+  <div className="inline-flex items-center gap-1 rounded-full bg-muted p-1">
+    {(['quick', 'custom'] as const).map((mode) => {
+      const active = (mode === 'custom') === isCustomSplit;
+      return (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode === 'custom')}
+          className={clsx(
+            'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+            active
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {mode === 'quick' ? 'Quick split' : 'Custom %'}
+        </button>
+      );
+    })}
+  </div>
+);
 
 export const BillTable = ({
   rows,
@@ -129,7 +160,6 @@ export const BillTable = ({
   calculateMemberTotal,
 }: BillTableProps) => {
   const [isCustomSplit, setIsCustomSplit] = useState<boolean>(false);
-  const toggleSplitMode = () => setIsCustomSplit(!isCustomSplit);
 
   const columnDefinitions = useMemo(() => {
     const definitions = { ...baseColumnDefinitions };
@@ -145,10 +175,7 @@ export const BillTable = ({
     <>
       <div className="hidden sm:block">
         <div className="flex justify-end mb-2">
-          <Button onClick={toggleSplitMode} variant="ghost" size="sm" className="gap-1.5">
-            <ArrowRightLeft size={14} />
-            {isCustomSplit ? 'Custom %' : 'Quick split'}
-          </Button>
+          <SplitModeToggle isCustomSplit={isCustomSplit} onChange={setIsCustomSplit} />
         </div>
         <Table>
           <TableHeader>
@@ -309,33 +336,48 @@ export const BillTable = ({
       )}
       <div className="block sm:hidden">
         <div className="flex justify-end mb-2">
-          <Button onClick={toggleSplitMode} variant="ghost" size="sm" className="gap-1.5">
-            <ArrowRightLeft size={14} />
-            {isCustomSplit ? 'Custom %' : 'Quick split'}
-          </Button>
+          <SplitModeToggle isCustomSplit={isCustomSplit} onChange={setIsCustomSplit} />
         </div>
         {rows.map((row) => (
-          <div key={row.id} className="border-2 rounded-lg p-4 mb-4">
+          <div
+            key={row.id}
+            className="relative bg-card border border-border rounded-xl shadow-sm active:bg-accent/30 transition-colors p-4 mb-4"
+          >
+            <button
+              type="button"
+              onClick={() => deleteRow(row.id)}
+              aria-label="Delete item"
+              className="absolute top-3 right-3 p-1.5 rounded-md text-destructive hover:bg-destructive/10 active:scale-95 transition-transform"
+            >
+              <Trash size={16} />
+            </button>
             {columns.map((col, colIndex) => (
-              <div
-                key={colIndex}
-                className={clsx(
-                  'flex justify-between mb-2 items-center',
-                  col === 'Sub-Total' && 'border-b-2 py-2 border-border'
-                )}
-              >
-                <div>
-                  <span
-                    className={clsx(
-                      'text-muted-foreground',
-                      'font-semibold',
-                      col === 'Sub-Total' && 'text-foreground '
-                    )}
-                  >
-                    {col}:
-                  </span>
-                </div>
-                <div className={clsx('w-1/2', col === 'Sub-Total' ? 'text-right' : '')}>
+              <div key={colIndex}>
+                {isMemberColumn(col) &&
+                  !columns.slice(0, colIndex).some((c) => isMemberColumn(c)) && (
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-3 mb-2">
+                      Split between
+                    </p>
+                  )}
+                <div
+                  className={clsx(
+                    'flex justify-between mb-2 items-center',
+                    colIndex === 0 && 'pr-8',
+                    col === 'Sub-Total' && 'border-b-2 py-2 border-border'
+                  )}
+                >
+                  <div>
+                    <span
+                      className={clsx(
+                        'text-muted-foreground',
+                        'font-semibold',
+                        col === 'Sub-Total' && 'text-foreground '
+                      )}
+                    >
+                      {col}:
+                    </span>
+                  </div>
+                  <div className={clsx('w-1/2', col === 'Sub-Total' ? 'text-right' : '')}>
                   {col === 'Unit' ? (
                     <Select
                       value={row[toKey(col)] || 'ea'}
@@ -399,6 +441,7 @@ export const BillTable = ({
                       calculateMemberShare={calculateMemberShare}
                     />
                   ) : null}
+                  </div>
                 </div>
               </div>
             ))}
@@ -413,9 +456,6 @@ export const BillTable = ({
               <span>Amount Remaining:</span>
               <span>{calculateAmountRemaining(row)}</span>
             </div>
-            <Button onClick={() => deleteRow(row.id)} className="mt-4 w-full flex gap-2 items-center">
-              <Trash /> Item
-            </Button>
           </div>
         ))}
       </div>
