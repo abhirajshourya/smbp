@@ -1,55 +1,65 @@
 # Split My Bill Plz
 
-Split My Bill Plz is a web application designed to help users easily split bills among multiple members. The application provides a user-friendly interface to add items, assign shares to members, and calculate the total amount each member owes.
+Split any bill, fairly, in seconds. Itemize what everyone ordered, account for discounts and tax, and see exactly who owes what — no spreadsheets, no sign-up required.
 
-## Features
-
-- **Add Items**: Easily add items to the bill with details such as quantity, unit, price, discount, and tax.
-- **Add Members**: Add members to the bill and assign shares to each member.
-- **Toggle Input Type**: Toggle between dropdown and text input for member shares.
-- **Calculate Totals**: Automatically calculate the subtotal, discount, tax, and total amount for each item and member.
-- **Responsive Design**: Optimized for both desktop and mobile views.
+[![CI](https://github.com/abhirajshourya/smbp/actions/workflows/ci.yml/badge.svg)](https://github.com/abhirajshourya/smbp/actions/workflows/ci.yml)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 ## Screenshots
 
-<div style="display: flex; gap: 10px;">
-  <img src="./public/Screenshot_Desktop.png" alt="Screenshot 1" style="width: 80%;">
-  <img src="./public/Screenshot.png" alt="Screenshot 2" style="width: 20%;">
-</div>
+| Landing | Desktop | Mobile |
+| :--: | :--: | :--: |
+| ![Landing page](./public/screenshot-landing.png) | ![Itemized split table on desktop](./public/screenshot-split-desktop.png) | ![Itemized split table on mobile](./public/screenshot-split-mobile.png) |
 
-## Changelog
+## Features
 
-- **Refactored**: Split component for improved readability and maintainability.
-- **Added**: Toggle functionality for input type (dropdown/text) for member shares.
-- **Improved**: UI alignment and spacing for mobile view.
-- **Enhanced**: Display of calculated member shares and remaining amounts.
-- **Updated**: Predefined shares to include additional options.
-- **Ensured**: Consistent styling across components and states.
+- **Itemized splitting** — add items with quantity, unit, price, discount, and tax, and see each item's exact subtotal.
+- **Quick split chips** — click a member's chip on any item to include or exclude them; the share divides evenly across whoever's included, automatically.
+- **Custom percentages** — toggle to "Custom %" for an exact, uneven split on any item.
+- **Global discount/tax** — apply a discount or tax rate to every item at once, with new items inheriting it automatically.
+- **No sign-up required** — everything works instantly in the browser, saved locally as you go.
+- **Responsive by design** — a full data table on desktop, a card-based layout on mobile.
 
-## Getting Started
+### Coming soon
 
-To get started with Split My Bill Plz, follow these steps:
+- 📷 **Receipt scan auto-fill** — snap a photo of a receipt and let AI fill in the line items for you, ready to review before it's added.
+- 💬 **Natural language edits** — "split the pizza evenly between Alice and Bob," just type it, no clicking through dropdowns.
 
-1. **Clone the repository**:
-   ```sh
-   git clone <repository-url>
-   ```
-2. **Install dependencies**:
-   ```sh
-   npm install
-   ```
-3. **Run the application**:
-   ```sh
-   npm start
-   ```
-4. **Open the application**: Open your browser and navigate to `http://localhost:3000`.
+## Tech stack
+
+- [Next.js](https://nextjs.org/) (App Router) + [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/) with a [shadcn/ui](https://ui.shadcn.com/) ("new-york") component set and [Radix UI](https://www.radix-ui.com/) primitives
+- [lucide-react](https://lucide.dev/) icons
+
+## Getting started
+
+**Prerequisites:** Node.js 20+ and npm.
+
+```sh
+git clone https://github.com/abhirajshourya/smbp.git
+cd smbp
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. The app hot-reloads as you edit.
+
+Other scripts:
+
+```sh
+npm run build   # production build
+npm run start   # run the production build
+npm run lint    # lint the project
+```
 
 ## Contributing
 
-We welcome contributions to Split My Bill Plz! If you have any ideas, suggestions, or bug reports, please open an issue or submit a pull request.
+Contributions are welcome! Please open an issue to discuss a change before submitting a pull request, especially for anything beyond a small fix.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-Thank you for using Split My Bill Plz! If you have any questions or need further assistance, please feel free to contact us.
+Licensed under the [MIT License](./LICENSE).
