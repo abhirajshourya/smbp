@@ -9,6 +9,21 @@ export type Row = {
 const initialColumns = ['Item', 'Quantity', 'Unit', 'Price', 'Discount', 'Tax', 'Sub-Total'];
 const units = ['kg', 'g', 'lb', 'oz', 'ea'];
 
+export const toKey = (col: string) => col.toLowerCase().replace(' ', '');
+
+export const predefinedColumnKeys = [
+  'item',
+  'quantity',
+  'unit',
+  'price',
+  'discount',
+  'tax',
+  'sub-total',
+  'total',
+];
+
+export const isMemberColumn = (col: string) => !predefinedColumnKeys.includes(toKey(col));
+
 const useSplitManager = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [columns, setColumns] = useState<string[]>(initialColumns);
@@ -18,7 +33,16 @@ const useSplitManager = () => {
   const addRow = () => {
     const newRow: Row = { id: uuidv4() };
     columns.forEach((col) => {
-      newRow[col.toLowerCase().replace(' ', '')] = '';
+      const key = toKey(col);
+      if (key === 'quantity') {
+        newRow[key] = '1';
+      } else if (key === 'discount') {
+        newRow[key] = globalDiscount ? globalDiscount.toString() : '';
+      } else if (key === 'tax') {
+        newRow[key] = globalTax ? globalTax.toString() : '';
+      } else {
+        newRow[key] = '';
+      }
     });
     setRows([...rows, newRow]);
   };
@@ -32,7 +56,7 @@ const useSplitManager = () => {
     setRows(
       rows.map((row) => ({
         ...row,
-        [newColumn.toLowerCase().replace(' ', '')]: '',
+        [toKey(newColumn)]: '',
       }))
     );
   };
@@ -43,17 +67,42 @@ const useSplitManager = () => {
     setRows(
       rows.map((row) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [column.toLowerCase().replace(' ', '')]: _, ...rest } = row;
+        const { [toKey(column)]: _, ...rest } = row;
         return { id: row.id, ...rest };
       })
     );
   };
 
   const updateRow = (rowId: string, column: string, value: string) => {
+    setRows(rows.map((row) => (row.id === rowId ? { ...row, [toKey(column)]: value } : row)));
+  };
+
+  // Toggles whether a member is included in a row's split, dividing 100% evenly
+  // across however many members end up included (leftover cents surface via
+  // calculateAmountRemaining, same as a manual split that doesn't add to 100%).
+  const toggleMemberInclusion = (rowId: string, memberKey: string) => {
+    const memberKeys = columns.filter(isMemberColumn).map(toKey);
+
     setRows(
-      rows.map((row) =>
-        row.id === rowId ? { ...row, [column.toLowerCase().replace(' ', '')]: value } : row
-      )
+      rows.map((row) => {
+        if (row.id !== rowId) return row;
+
+        const isIncluded = (key: string) => {
+          const value = parseFloat(row[key]);
+          return !isNaN(value) && value > 0;
+        };
+        const currentlyIncluded = memberKeys.filter(isIncluded);
+        const willInclude = currentlyIncluded.includes(memberKey)
+          ? currentlyIncluded.filter((key) => key !== memberKey)
+          : [...currentlyIncluded, memberKey];
+
+        const updatedRow = { ...row };
+        const evenShare = willInclude.length > 0 ? (100 / willInclude.length).toFixed(2) : '';
+        memberKeys.forEach((key) => {
+          updatedRow[key] = willInclude.includes(key) ? evenShare : '';
+        });
+        return updatedRow;
+      })
     );
   };
 
@@ -79,19 +128,10 @@ const useSplitManager = () => {
   const calculateAmountRemaining = (row: Row) => {
     const subtotal = parseFloat(calculateSubtotal(row));
     const totalSplit = columns.reduce((total, col) => {
-      const predefinedColumns = [
-        'item',
-        'quantity',
-        'unit',
-        'price',
-        'discount',
-        'tax',
-        'sub-total',
-      ];
-      if (predefinedColumns.includes(col.toLowerCase().replace(' ', ''))) {
+      if (!isMemberColumn(col)) {
         return total;
       }
-      const splitPercent = parseFloat(row[col.toLowerCase().replace(' ', '')]) || 0;
+      const splitPercent = parseFloat(row[toKey(col)]) || 0;
       return total + (subtotal * splitPercent) / 100;
     }, 0);
     const amountRemaining = subtotal - totalSplit;
@@ -100,7 +140,7 @@ const useSplitManager = () => {
 
   const calculateMemberShare = (row: Row, column: string) => {
     const subtotal = parseFloat(calculateSubtotal(row));
-    const percentage = parseFloat(row[column.toLowerCase().replace(' ', '')]) || 0;
+    const percentage = parseFloat(row[toKey(column)]) || 0;
     return ((subtotal * percentage) / 100).toFixed(2);
   };
 
@@ -141,6 +181,7 @@ const useSplitManager = () => {
     addColumn,
     deleteColumn,
     updateRow,
+    toggleMemberInclusion,
     calculateSubtotal,
     calculateTotal,
     calculateAmountRemaining,
