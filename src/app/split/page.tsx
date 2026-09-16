@@ -131,7 +131,7 @@ export default function Split() {
           <div className="flex-grow md:block hidden" />
           <div className="flex gap-2 text-2xl w-full md:w-auto">
             <span>Total:</span>
-            <span className="font-semibold">${calculateTotal()}</span>
+            <span className="font-semibold font-mono">${calculateTotal()}</span>
           </div>
         </div>
         <div className="flex flex-col font-semibold gap-2 flex-wrap mx-4">
