@@ -18,7 +18,7 @@ function escapeHtml(value: string) {
 // PDF/CSV exports. This also sidesteps html2canvas's text-layout quirks
 // with small pill-shaped labels, which never rendered reliably once the
 // receipt got tall enough (see git history on this file for the earlier
-// attempts).
+// attempts with per-item discount/tax tags and per-member chips).
 function buildReceiptMarkup(data: ReceiptData): string {
   return `
     <div style="background:#ffffff;color:${TEXT};font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;width:340px;padding:24px;">
@@ -27,7 +27,7 @@ function buildReceiptMarkup(data: ReceiptData): string {
         <span style="font-family:${SERIF_STACK};font-weight:500;font-size:17px;">Split My Bill Plz</span>
       </div>
       <div style="color:${MUTED};font-size:12px;margin-bottom:16px;">${escapeHtml(data.date)}</div>
-      <div style="display:flex;justify-content:space-between;border-top:1px solid ${BORDER};margin-top:2px;padding-top:18px;font-weight:500;font-size:20px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid ${BORDER};margin-top:2px;padding-top:18px;font-weight:500;font-size:20px;">
         <span>Total</span><span>$${data.total}</span>
       </div>
     </div>`;
