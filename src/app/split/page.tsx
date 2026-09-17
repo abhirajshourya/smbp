@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Check } from 'lucide-react';
+import clsx from 'clsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import useSplitManager from '@/hooks/useSplitManager';
+import useSplitManager, { isMemberColumn } from '@/hooks/useSplitManager';
 import { CustomNav } from '@/components/CustomNav';
 import { BillTable } from '@/components/BillTable';
 
@@ -88,11 +89,13 @@ export default function Split() {
     }
   };
 
+  const memberColumns = columns.filter(isMemberColumn);
+
   return (
     <div>
       <CustomNav />
       <div className="p-6 flex flex-col text-center min-h-screen gap-4">
-        <div className="flex gap-4 items-center flex-wrap">
+        <div className="sticky top-[57px] z-40 -mx-6 px-6 py-2 bg-background/90 backdrop-blur-md border-b border-border flex gap-4 items-center flex-wrap">
           <Button onClick={addRow} className="flex gap-2 w-fit" variant="outline">
             <Plus /> Item
           </Button>
@@ -134,54 +137,82 @@ export default function Split() {
             <span className="font-semibold font-mono">${calculateTotal()}</span>
           </div>
         </div>
-        <div className="flex flex-col font-semibold gap-2 flex-wrap mx-4">
-          {columns
-            .filter(
-              (col) =>
-                !['Item', 'Quantity', 'Unit', 'Price', 'Discount', 'Tax', 'Sub-Total', 'Total'].includes(
-                  col
-                )
-            )
-            .map((col, index) => (
-              <div key={index} className="flex items-center justify-end self-end gap-2 w-1/4">
-                <span className="text-muted-foreground">{col}:</span>
-                <span className="w-fit">$</span>
-                <span className="w-8">{calculateMemberTotal(col)}</span>
+        {rows.length > 0 && (
+          <div className="rounded-xl border border-border bg-card shadow-sm p-4 text-left sm:w-80 sm:self-end">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              Summary
+            </p>
+            {memberColumns.map((col, index) => (
+              <div
+                key={col}
+                className={clsx(
+                  'flex items-center justify-between py-2',
+                  index === 0 && 'pt-0',
+                  index === memberColumns.length - 1 && 'pb-0',
+                  index !== memberColumns.length - 1 && 'border-b border-border'
+                )}
+              >
+                <span className="text-sm font-medium text-muted-foreground">{col}</span>
+                <span className="font-semibold font-mono">$ {calculateMemberTotal(col)}</span>
               </div>
             ))}
-        </div>
-        <div className="flex flex-col self-end gap-2 w-64">
-          <div className="flex justify-end items-center gap-2 w-full">
-            <span className="text-muted-foreground w-24 text-right">Discount:</span>
-            <Input
-              type="text"
-              inputMode="decimal"
-              value={discountInput}
-              onChange={(e) => setDiscountInput(e.target.value)}
-              placeholder="25"
-              className="text-center w-16"
-            />
-            <span className="text-muted-foreground">%</span>
-            <Button onClick={handleApplyDiscount} className="p-2" variant="outline">
-              <Check size={16} />
-            </Button>
+            <div className={clsx(memberColumns.length > 0 && 'mt-4 pt-4 border-t border-border')}>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Apply to all items
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                    Discount
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={discountInput}
+                      onChange={(e) => setDiscountInput(e.target.value)}
+                      placeholder="25"
+                      className="text-right"
+                    />
+                    <span className="text-muted-foreground text-sm">%</span>
+                    <button
+                      type="button"
+                      onClick={handleApplyDiscount}
+                      aria-label="Apply discount to all items"
+                      className="p-2 rounded-md border border-input hover:bg-accent active:scale-95 transition-transform shrink-0"
+                    >
+                      <Check size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                    Tax
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={taxInput}
+                      onChange={(e) => setTaxInput(e.target.value)}
+                      placeholder="13"
+                      className="text-right"
+                    />
+                    <span className="text-muted-foreground text-sm">%</span>
+                    <button
+                      type="button"
+                      onClick={handleApplyTax}
+                      aria-label="Apply tax to all items"
+                      className="p-2 rounded-md border border-input hover:bg-accent active:scale-95 transition-transform shrink-0"
+                    >
+                      <Check size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end items-center gap-2 w-full">
-            <span className="text-muted-foreground w-24 text-right">Tax:</span>
-            <Input
-              type="text"
-              inputMode="decimal"
-              value={taxInput}
-              onChange={(e) => setTaxInput(e.target.value)}
-              placeholder="13"
-              className="text-center w-16"
-            />
-            <span className="text-muted-foreground">%</span>
-            <Button onClick={handleApplyTax} className="p-2" variant="outline">
-              <Check size={16} />
-            </Button>
-          </div>
-        </div>
+        )}
         <BillTable
           rows={rows}
           columns={columns}

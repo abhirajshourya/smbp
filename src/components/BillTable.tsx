@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Trash, ArrowRightLeft } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -11,7 +11,6 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -104,7 +103,7 @@ const MemberCell = ({
       type="button"
       onClick={onToggle}
       className={clsx(
-        'w-full rounded-md px-3 py-1.5 text-sm font-medium transition-colors border',
+        'w-full rounded-md px-3 py-2.5 sm:py-1.5 text-sm font-medium transition-colors border active:scale-95',
         isIncluded
           ? 'bg-primary/10 text-primary border-primary/30'
           : 'bg-transparent text-muted-foreground border-input hover:bg-accent'
@@ -114,6 +113,105 @@ const MemberCell = ({
     </button>
   );
 };
+
+// Mobile-only: a member chip with the name and (once included) their share
+// baked into one pill, so the mobile card doesn't need a separate name label
+// per member — tap to toggle, or shows a compact % input in custom mode.
+const MemberChip = ({
+  row,
+  col,
+  isCustomSplit,
+  onToggle,
+  onCustomChange,
+  calculateMemberShare,
+}: {
+  row: Row;
+  col: string;
+  isCustomSplit: boolean;
+  onToggle: () => void;
+  onCustomChange: (value: string) => void;
+  calculateMemberShare: (row: Row, column: string) => string;
+}) => {
+  const key = toKey(col);
+  const percentage = parseFloat(row[key]) || 0;
+  const isIncluded = percentage > 0;
+
+  if (isCustomSplit) {
+    return (
+      <div className="flex items-center gap-1.5 rounded-full border border-input pl-3 pr-2 py-1.5">
+        <span className="text-sm font-medium">{col}</span>
+        <Input
+          type="text"
+          inputMode="decimal"
+          value={row[key]}
+          onChange={(e) => onCustomChange(e.target.value)}
+          className="w-12 h-7 px-1.5 text-right border-0 bg-muted shadow-none"
+        />
+        <span className="text-xs text-muted-foreground">%</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={clsx(
+        'rounded-full px-3.5 py-2 text-sm font-medium transition-colors border active:scale-95',
+        isIncluded
+          ? 'bg-primary/10 text-primary border-primary/30'
+          : 'bg-transparent text-muted-foreground border-input hover:bg-accent'
+      )}
+    >
+      {col}
+      {isIncluded && (
+        <span className="ml-1.5 font-mono">${calculateMemberShare(row, col)}</span>
+      )}
+    </button>
+  );
+};
+
+// Mobile-only: small labeled cell for the compact stat grid (qty/unit/price/etc).
+const StatField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div>
+    <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+      {label}
+    </label>
+    {children}
+  </div>
+);
+
+// A two-segment pill showing both split modes at once, so the active mode
+// and the click target are unambiguous (unlike a single toggle button whose
+// label just names whichever mode is currently active).
+const SplitModeToggle = ({
+  isCustomSplit,
+  onChange,
+}: {
+  isCustomSplit: boolean;
+  onChange: (isCustomSplit: boolean) => void;
+}) => (
+  <div className="inline-flex items-center gap-1 rounded-full bg-muted p-1">
+    {(['quick', 'custom'] as const).map((mode) => {
+      const active = (mode === 'custom') === isCustomSplit;
+      return (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode === 'custom')}
+          className={clsx(
+            'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+            active
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {mode === 'quick' ? 'Quick split' : 'Custom %'}
+        </button>
+      );
+    })}
+  </div>
+);
 
 export const BillTable = ({
   rows,
@@ -129,7 +227,6 @@ export const BillTable = ({
   calculateMemberTotal,
 }: BillTableProps) => {
   const [isCustomSplit, setIsCustomSplit] = useState<boolean>(false);
-  const toggleSplitMode = () => setIsCustomSplit(!isCustomSplit);
 
   const columnDefinitions = useMemo(() => {
     const definitions = { ...baseColumnDefinitions };
@@ -145,10 +242,7 @@ export const BillTable = ({
     <>
       <div className="hidden sm:block">
         <div className="flex justify-end mb-2">
-          <Button onClick={toggleSplitMode} variant="ghost" size="sm" className="gap-1.5">
-            <ArrowRightLeft size={14} />
-            {isCustomSplit ? 'Custom %' : 'Quick split'}
-          </Button>
+          <SplitModeToggle isCustomSplit={isCustomSplit} onChange={setIsCustomSplit} />
         </div>
         <Table>
           <TableHeader>
@@ -309,115 +403,132 @@ export const BillTable = ({
       )}
       <div className="block sm:hidden">
         <div className="flex justify-end mb-2">
-          <Button onClick={toggleSplitMode} variant="ghost" size="sm" className="gap-1.5">
-            <ArrowRightLeft size={14} />
-            {isCustomSplit ? 'Custom %' : 'Quick split'}
-          </Button>
+          <SplitModeToggle isCustomSplit={isCustomSplit} onChange={setIsCustomSplit} />
         </div>
-        {rows.map((row) => (
-          <div key={row.id} className="border-2 rounded-lg p-4 mb-4">
-            {columns.map((col, colIndex) => (
-              <div
-                key={colIndex}
-                className={clsx(
-                  'flex justify-between mb-2 items-center',
-                  col === 'Sub-Total' && 'border-b-2 py-2 border-border'
-                )}
+        {rows.map((row) => {
+          const memberCols = columns.filter(isMemberColumn);
+          return (
+            <div
+              key={row.id}
+              className="relative bg-card border border-border rounded-xl shadow-sm active:bg-accent/30 transition-colors p-4 mb-4"
+            >
+              <button
+                type="button"
+                onClick={() => deleteRow(row.id)}
+                aria-label="Delete item"
+                className="absolute top-3 right-3 p-1.5 rounded-md text-destructive hover:bg-destructive/10 active:scale-95 transition-transform"
               >
-                <div>
-                  <span
-                    className={clsx(
-                      'text-muted-foreground',
-                      'font-semibold',
-                      col === 'Sub-Total' && 'text-foreground '
-                    )}
+                <Trash size={16} />
+              </button>
+
+              <Input
+                type="text"
+                value={row.item}
+                onChange={(e) => updateRow(row.id, 'Item', e.target.value)}
+                placeholder="Item name"
+                className="pr-8 border-0 border-b border-input rounded-none px-0 shadow-none text-base font-semibold focus-visible:ring-0 focus-visible:border-primary"
+              />
+
+              <div className="grid grid-cols-3 gap-x-3 gap-y-3 mt-4">
+                <StatField label="Qty">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={row.quantity}
+                    onChange={(e) => updateRow(row.id, 'Quantity', e.target.value)}
+                  />
+                </StatField>
+                <StatField label="Unit">
+                  <Select
+                    value={row.unit || 'ea'}
+                    onValueChange={(value) => updateRow(row.id, 'Unit', value)}
                   >
-                    {col}:
-                  </span>
-                </div>
-                <div className={clsx('w-1/2', col === 'Sub-Total' ? 'text-right' : '')}>
-                  {col === 'Unit' ? (
-                    <Select
-                      value={row[toKey(col)] || 'ea'}
-                      onValueChange={(value) => updateRow(row.id, col, value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="--" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Units</SelectLabel>
-                          {units.map((unit) => (
-                            <SelectItem key={unit} value={unit}>
-                              {unit}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  ) : col === 'Price' ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-sm">$</span>
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={row[toKey(col)]}
-                        onChange={(e) => updateRow(row.id, col, e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-                  ) : col === 'Sub-Total' ? (
-                    <span className="font-semibold">{'$ ' + calculateSubtotal(row)}</span>
-                  ) : col === 'Discount' || col === 'Tax' ? (
-                    <div className="flex items-center">
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={row[toKey(col)]}
-                        onChange={(e) => {
-                          updateRow(row.id, col, e.target.value);
-                        }}
-                        className="w-full text-right"
-                      />
-                      <span className="ml-1 text-muted-foreground">%</span>
-                    </div>
-                  ) : ['item', 'quantity'].includes(toKey(col)) ? (
+                    <SelectTrigger>
+                      <SelectValue placeholder="--" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Units</SelectLabel>
+                        {units.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </StatField>
+                <StatField label="Price">
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground text-sm">$</span>
                     <Input
                       type="text"
-                      inputMode={toKey(col) === 'quantity' ? 'decimal' : undefined}
-                      value={row[toKey(col)]}
-                      onChange={(e) => updateRow(row.id, col, e.target.value)}
-                      className="w-full"
+                      inputMode="decimal"
+                      value={row.price}
+                      onChange={(e) => updateRow(row.id, 'Price', e.target.value)}
                     />
-                  ) : isMemberColumn(col) ? (
-                    <MemberCell
-                      row={row}
-                      col={col}
-                      isCustomSplit={isCustomSplit}
-                      onToggle={() => toggleMemberInclusion(row.id, toKey(col))}
-                      onCustomChange={(value) => updateRow(row.id, col, value)}
-                      calculateMemberShare={calculateMemberShare}
+                  </div>
+                </StatField>
+                <StatField label="Discount">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.discount}
+                      onChange={(e) => updateRow(row.id, 'Discount', e.target.value)}
                     />
-                  ) : null}
+                    <span className="text-muted-foreground text-sm">%</span>
+                  </div>
+                </StatField>
+                <StatField label="Tax">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.tax}
+                      onChange={(e) => updateRow(row.id, 'Tax', e.target.value)}
+                    />
+                    <span className="text-muted-foreground text-sm">%</span>
+                  </div>
+                </StatField>
+                <div className="flex flex-col justify-end items-end">
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                    Sub-total
+                  </span>
+                  <span className="font-semibold font-mono">$ {calculateSubtotal(row)}</span>
                 </div>
               </div>
-            ))}
-            <div
-              className={clsx(
-                'flex justify-between mt-2',
-                Number(calculateAmountRemaining(row)) !== 0
-                  ? 'font-semibold text-destructive'
-                  : 'hidden'
+
+              {memberCols.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-border">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Split between
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {memberCols.map((col) => (
+                      <MemberChip
+                        key={col}
+                        row={row}
+                        col={col}
+                        isCustomSplit={isCustomSplit}
+                        onToggle={() => toggleMemberInclusion(row.id, toKey(col))}
+                        onCustomChange={(value) => updateRow(row.id, col, value)}
+                        calculateMemberShare={calculateMemberShare}
+                      />
+                    ))}
+                  </div>
+                </div>
               )}
-            >
-              <span>Amount Remaining:</span>
-              <span>{calculateAmountRemaining(row)}</span>
+
+              {Number(calculateAmountRemaining(row)) !== 0 && (
+                <div className="flex justify-between mt-3 text-sm font-semibold text-destructive">
+                  <span>Amount remaining</span>
+                  <span>{calculateAmountRemaining(row)}</span>
+                </div>
+              )}
             </div>
-            <Button onClick={() => deleteRow(row.id)} className="mt-4 w-full flex gap-2 items-center">
-              <Trash /> Item
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
