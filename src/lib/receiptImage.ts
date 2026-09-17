@@ -5,7 +5,18 @@ const BRAND_LIGHT = '#8B85F0';
 const TEXT = '#1a1a1a';
 const MUTED = '#8a8a8a';
 const BORDER = '#e5e5e5';
-const SERIF_STACK = 'var(--font-receipt-serif), Georgia, serif';
+// Deliberately not the app's --font-receipt-serif custom web font (Newsreader,
+// via next/font): confirmed by direct comparison (a real browser screenshot
+// vs. this same markup rasterized by html2canvas) that html2canvas mismeasures
+// that custom font's vertical metrics badly enough to throw off text-centering
+// math by ~10px, even though the live browser renders it correctly. Georgia is
+// a plain system serif with no custom @font-face, which html2canvas measures
+// reliably — worth the small loss of brand flourish in just this export.
+// Single-quoted font name: this stack gets interpolated straight into a
+// double-quoted HTML style="..." attribute, and a double-quoted "Times New
+// Roman" there would silently truncate the attribute at that quote — every
+// declaration after font-family would just be dropped by the HTML parser.
+const SERIF_STACK = "Georgia, 'Times New Roman', serif";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) =>
@@ -31,11 +42,22 @@ function buildReceiptMarkup(data: ReceiptData): string {
     )
     .join('');
 
+  // The brand row's span line-height matches the mark's 18px height so both
+  // flex children have identical box height. Even so, html2canvas paints
+  // text glyphs anchored near the bottom of their line box rather than
+  // centering the glyph ink within it (confirmed by comparing this exact
+  // markup's rendered pixels against a real browser screenshot of it —
+  // the live browser centers it correctly, html2canvas doesn't), so the
+  // solid-color mark — whose own ink faithfully fills its box, unlike
+  // text — needs a manual offset to visually land where html2canvas
+  // actually draws the text. This offset is only safe as a hardcoded
+  // constant because this row's content ("Split My Bill Plz" at a fixed
+  // font-size) never varies per bill.
   return `
     <div style="background:#ffffff;color:${TEXT};font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;width:340px;padding:24px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
-        <div style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg, ${BRAND}, ${BRAND_LIGHT});flex-shrink:0;"></div>
-        <span style="font-family:${SERIF_STACK};font-weight:500;font-size:17px;">Split My Bill Plz</span>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:2px;">
+        <div data-testid="brand-mark" style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg, ${BRAND}, ${BRAND_LIGHT});flex-shrink:0;margin-top:10.5px;"></div>
+        <span data-testid="brand-name" style="font-family:${SERIF_STACK};font-weight:500;font-size:17px;line-height:18px;">Split My Bill Plz</span>
       </div>
       <div style="color:${MUTED};font-size:12px;margin-bottom:16px;">${escapeHtml(data.date)}</div>
       <div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid ${BORDER};margin-top:2px;padding-top:18px;font-weight:500;font-size:20px;">

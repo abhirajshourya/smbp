@@ -8,6 +8,18 @@ import { captureRowAlignment, keyFor } from './helpers/canvasInk';
 // room for anti-aliasing noise without masking a real several-pixel drift.
 const ALIGNMENT_TOLERANCE_PX = 2;
 
+test('brand mark and wordmark share a vertical center', async ({ page }) => {
+  await buildDemoBill(page, ['Alex'], [{ name: 'Dinner', price: '20', tax: '8' }]);
+
+  const [result] = await captureRowAlignment(page, [
+    { row: 'Brand', leftKey: keyFor('brand-mark'), rightKey: keyFor('brand-name') },
+  ]);
+
+  expect(result.delta, `Brand row misaligned by ${result.delta.toFixed(1)}px`).toBeLessThanOrEqual(
+    ALIGNMENT_TOLERANCE_PX
+  );
+});
+
 test('total label and amount share a baseline', async ({ page }) => {
   await buildDemoBill(page, ['Alex'], [{ name: 'Dinner', price: '20', tax: '8' }]);
 

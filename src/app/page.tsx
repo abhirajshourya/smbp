@@ -228,7 +228,7 @@ export default function Home() {
                     src="/screenshot-receipt-export.png"
                     alt="A generated receipt image for a dinner bill, showing the total amount and each person's share"
                     width={680}
-                    height={652}
+                    height={658}
                     className="rounded-lg w-full h-auto"
                   />
                 </div>
