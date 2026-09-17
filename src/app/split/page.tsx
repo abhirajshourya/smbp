@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Trash2, Check } from 'lucide-react';
 import clsx from 'clsx';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,6 @@ export default function Split() {
   const [taxInput, setTaxInput] = useState<string>('');
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
-  const captureRef = useRef<HTMLDivElement>(null);
 
   // Handles both the normal localStorage load AND an incoming ?shared= link
   // in one effect — both reads are synchronous, so deciding "does the user
@@ -172,7 +171,6 @@ export default function Split() {
             rows={rows}
             columns={columns}
             calculations={{ calculateSubtotal, calculateMemberShare, calculateMemberTotal, calculateTotal }}
-            captureRef={captureRef}
           />
           <div className="flex-grow md:block hidden" />
           <div className="flex gap-2 text-2xl w-full md:w-auto">
@@ -180,7 +178,6 @@ export default function Split() {
             <span className="font-semibold font-mono">${calculateTotal()}</span>
           </div>
         </div>
-        <div ref={captureRef} className="flex flex-col gap-4">
         <div className="rounded-xl border border-border bg-card shadow-sm p-4 text-left sm:w-80 sm:self-end">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               Summary
@@ -304,7 +301,6 @@ export default function Split() {
           calculateMemberShare={calculateMemberShare}
           calculateMemberTotal={calculateMemberTotal}
         />
-        </div>
       </div>
     </div>
   );

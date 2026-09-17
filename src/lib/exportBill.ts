@@ -13,6 +13,51 @@ export type ShareableBillState = {
   billTotal: string;
 };
 
+export type ReceiptItem = {
+  name: string;
+  amount: string;
+  splitWith: string;
+};
+
+export type ReceiptData = {
+  date: string;
+  items: ReceiptItem[];
+  total: string;
+  memberTotals: { name: string; amount: string }[];
+};
+
+// Shared shape for the image/PDF receipt renderers — a purpose-built layout,
+// not a screenshot of the live table, so it stays legible and consistent
+// regardless of what's on screen at export time.
+export function buildReceiptData(
+  rows: Row[],
+  columns: string[],
+  { calculateSubtotal, calculateMemberShare, calculateMemberTotal, calculateTotal }: BillCalculations
+): ReceiptData {
+  const memberColumns = columns.filter(isMemberColumn);
+
+  const items = rows.map((row) => {
+    const splitWith = memberColumns.filter((col) => parseFloat(calculateMemberShare(row, col)) > 0);
+    return {
+      name: row.item?.trim() || 'Item',
+      amount: calculateSubtotal(row),
+      splitWith: splitWith.length > 0 ? splitWith.join(', ') : '—',
+    };
+  });
+
+  const memberTotals = memberColumns.map((col) => ({
+    name: col,
+    amount: calculateMemberTotal(col),
+  }));
+
+  return {
+    date: new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }),
+    items,
+    total: calculateTotal(),
+    memberTotals,
+  };
+}
+
 // Plain-text breakdown, formatted to be pasted straight into a chat with
 // friends: each item's subtotal and who's splitting it, then the grand
 // total and what everyone owes.

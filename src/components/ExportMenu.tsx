@@ -10,16 +10,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { type Row } from '@/hooks/useSplitManager';
-import { type BillCalculations, buildCsv, buildTextSummary, downloadTextFile } from '@/lib/exportBill';
+import { type BillCalculations, buildCsv, buildReceiptData, buildTextSummary, downloadTextFile } from '@/lib/exportBill';
+import { generateReceiptImage } from '@/lib/receiptImage';
+import { generateReceiptPdf } from '@/lib/receiptPdf';
 
 type ExportMenuProps = {
   rows: Row[];
   columns: string[];
   calculations: BillCalculations;
-  captureRef: React.RefObject<HTMLElement | null>;
 };
 
-export function ExportMenu({ rows, columns, calculations, captureRef }: ExportMenuProps) {
+export function ExportMenu({ rows, columns, calculations }: ExportMenuProps) {
   const [status, setStatus] = useState<{ message: string; isError: boolean } | null>(null);
   const statusTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -65,31 +66,16 @@ export function ExportMenu({ rows, columns, calculations, captureRef }: ExportMe
   };
 
   const handleImageExport = async () => {
-    if (!captureRef.current) return;
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(captureRef.current, { backgroundColor: '#ffffff' });
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = 'split-my-bill-plz.png';
-      link.click();
+      await generateReceiptImage(buildReceiptData(rows, columns, calculations));
     } catch {
       flashStatus("Couldn't generate the image", true);
     }
   };
 
   const handlePdfExport = async () => {
-    if (!captureRef.current) return;
     try {
-      const [{ default: html2canvas }, { default: JsPdf }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-      const canvas = await html2canvas(captureRef.current, { backgroundColor: '#ffffff' });
-      const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
-      const pdf = new JsPdf({ orientation, unit: 'px', format: [canvas.width, canvas.height] });
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save('split-my-bill-plz.pdf');
+      await generateReceiptPdf(buildReceiptData(rows, columns, calculations));
     } catch {
       flashStatus("Couldn't generate the PDF", true);
     }
