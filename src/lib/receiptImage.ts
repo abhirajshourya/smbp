@@ -13,13 +13,24 @@ function escapeHtml(value: string) {
   );
 }
 
-// The image export intentionally shows only the total, not the itemized
-// list or the per-member breakdown — those live on-screen and in the
-// PDF/CSV exports. This also sidesteps html2canvas's text-layout quirks
-// with small pill-shaped labels, which never rendered reliably once the
-// receipt got tall enough (see git history on this file for the earlier
-// attempts with per-item discount/tax tags and per-member chips).
+// The image export intentionally shows only the total and a plain
+// label/amount list per member, not the itemized list — the itemized view
+// lives on-screen and in the PDF/CSV exports. Per-item discount/tax tags
+// and pill-shaped member chips were both tried here and dropped: html2canvas
+// never rendered their small inline-block pills reliably once the receipt
+// got tall enough (see git history on this file). Plain flex rows with
+// align-items:baseline (no pills, no unset flex defaults) are the layout
+// that has actually held up under Playwright's pixel-level checks.
 function buildReceiptMarkup(data: ReceiptData): string {
+  const memberRows = data.memberTotals
+    .map(
+      (member, index) => `
+        <div data-testid="member-row" data-member-name="${escapeHtml(member.name)}" style="display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;font-size:14px;${index > 0 ? `border-top:1px solid ${BORDER};` : ''}">
+          <span data-testid="member-name">${escapeHtml(member.name)}</span><span data-testid="member-amount">$${member.amount}</span>
+        </div>`
+    )
+    .join('');
+
   return `
     <div style="background:#ffffff;color:${TEXT};font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;width:340px;padding:24px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
@@ -28,8 +39,16 @@ function buildReceiptMarkup(data: ReceiptData): string {
       </div>
       <div style="color:${MUTED};font-size:12px;margin-bottom:16px;">${escapeHtml(data.date)}</div>
       <div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid ${BORDER};margin-top:2px;padding-top:18px;font-weight:500;font-size:20px;">
-        <span>Total</span><span>$${data.total}</span>
+        <span data-testid="total-label">Total</span><span data-testid="total-amount">$${data.total}</span>
       </div>
+      ${
+        data.memberTotals.length > 0
+          ? `<div style="margin-top:20px;padding-top:6px;border-top:1px solid ${BORDER};">
+              <div style="color:${MUTED};font-size:10px;font-weight:500;letter-spacing:0.02em;margin-top:10px;margin-bottom:2px;">WHO OWES WHAT</div>
+              ${memberRows}
+            </div>`
+          : ''
+      }
     </div>`;
 }
 

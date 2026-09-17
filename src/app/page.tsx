@@ -226,9 +226,9 @@ export default function Home() {
                 <div className="rounded-xl border border-white/30 bg-white p-3 shadow-xl shadow-black/[0.06] max-w-xs w-full">
                   <Image
                     src="/screenshot-receipt-export.png"
-                    alt="A generated receipt image for a dinner bill, showing the Split My Bill Plz branding, the date, and the total amount"
+                    alt="A generated receipt image for a dinner bill, showing the total amount and each person's share"
                     width={680}
-                    height={318}
+                    height={652}
                     className="rounded-lg w-full h-auto"
                   />
                 </div>
