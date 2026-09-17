@@ -1,16 +1,10 @@
-import type { ReceiptData, ReceiptTag } from './exportBill';
+import type { ReceiptData } from './exportBill';
 
 const BRAND = '#5048E5';
 const BRAND_LIGHT = '#8B85F0';
 const TEXT = '#1a1a1a';
 const MUTED = '#8a8a8a';
 const BORDER = '#e5e5e5';
-const CHIP_BG = '#E8E7FB';
-const CHIP_TEXT = '#3C3489';
-const DISCOUNT_BG = '#EAF3DE';
-const DISCOUNT_TEXT = '#3B6D11';
-const TAX_BG = '#FAEEDA';
-const TAX_TEXT = '#854F0B';
 const SERIF_STACK = 'var(--font-receipt-serif), Georgia, serif';
 
 function escapeHtml(value: string) {
@@ -19,38 +13,13 @@ function escapeHtml(value: string) {
   );
 }
 
-function buildTag(tag: ReceiptTag): string {
-  const [bg, color] = tag.tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
-  // A fixed pixel height + matching line-height (rather than padding-driven
-  // sizing) centers the label using plain line-box math, which is the most
-  // predictable technique across a live browser and html2canvas alike.
-  return `<span style="display:inline-block;background:${bg};color:${color};border-radius:999px;padding:0 7px;height:16px;line-height:16px;font-size:9.5px;letter-spacing:0.01em;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
-}
-
+// The image export intentionally shows only the total, not the itemized
+// list or the per-member breakdown — those live on-screen and in the
+// PDF/CSV exports. This also sidesteps html2canvas's text-layout quirks
+// with small pill-shaped labels, which never rendered reliably once the
+// receipt got tall enough (see git history on this file for the earlier
+// attempts).
 function buildReceiptMarkup(data: ReceiptData): string {
-  const rows = data.items
-    .map(
-      (item) => `
-        <tr>
-          <td style="padding:6px 0 0;"><div style="display:flex;align-items:center;gap:6px;">${escapeHtml(item.name)}${item.tags.map(buildTag).join('')}</div></td>
-          <td style="padding:6px 0 0;text-align:right;white-space:nowrap;">$${item.amount}</td>
-        </tr>
-        <tr>
-          <td style="padding:0 0 6px;color:${MUTED};font-size:10.5px;">${escapeHtml(item.splitWith)}</td>
-          <td></td>
-        </tr>`
-    )
-    .join('');
-
-  const chips = data.memberTotals
-    .map(
-      (member) => `
-        <span style="background:${CHIP_BG};color:${CHIP_TEXT};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:500;display:inline-block;">
-          ${escapeHtml(member.name)} $${member.amount}
-        </span>`
-    )
-    .join('');
-
   return `
     <div style="background:#ffffff;color:${TEXT};font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;width:340px;padding:24px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
@@ -58,24 +27,9 @@ function buildReceiptMarkup(data: ReceiptData): string {
         <span style="font-family:${SERIF_STACK};font-weight:500;font-size:17px;">Split My Bill Plz</span>
       </div>
       <div style="color:${MUTED};font-size:12px;margin-bottom:16px;">${escapeHtml(data.date)}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
-        <tr style="border-bottom:1px solid ${BORDER};">
-          <td style="padding:4px 0;color:${MUTED};font-weight:500;">item</td>
-          <td style="padding:4px 0;color:${MUTED};font-weight:500;text-align:right;">amount</td>
-        </tr>
-        ${rows}
-      </table>
-      <div style="display:flex;justify-content:space-between;border-top:1px solid ${TEXT};margin-top:6px;padding-top:10px;font-weight:500;font-size:15px;">
+      <div style="display:flex;justify-content:space-between;border-top:1px solid ${BORDER};margin-top:2px;padding-top:18px;font-weight:500;font-size:20px;">
         <span>Total</span><span>$${data.total}</span>
       </div>
-      ${
-        data.memberTotals.length > 0
-          ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid ${BORDER};">
-              <div style="color:${MUTED};font-size:11px;font-weight:500;margin-bottom:8px;">who owes what</div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;">${chips}</div>
-            </div>`
-          : ''
-      }
     </div>`;
 }
 
@@ -93,15 +47,15 @@ async function renderToCanvas(data: ReceiptData): Promise<HTMLCanvasElement> {
   document.body.appendChild(container);
 
   try {
-    // scale:2 (kept here for a while for extra sharpness) is the actual
-    // cause of the tag pills rendering with their text sitting low —
-    // confirmed by isolating the exact same markup at both scales: at
-    // scale:2, html2canvas's own text-layout engine accumulates a growing
-    // vertical rounding error the further down the receipt an element sits
-    // (a row 4 items deep is visibly off; row 1 is fine), and doubling the
-    // internal render resolution doubles that drift. scale:1 removes it
-    // entirely for the exact same DOM/CSS. The output is a touch softer on
-    // very high-DPI screens, but that's a better trade than misaligned text.
+    // scale:2 (tried earlier for extra sharpness) turned out to be the
+    // cause of a text-alignment bug in a previous version of this markup:
+    // html2canvas's own text-layout engine accumulates a growing vertical
+    // rounding error the further down the rendered content an element
+    // sits, and doubling the internal render resolution doubled that
+    // drift. scale:1 removes it entirely for the same DOM/CSS. The output
+    // is a touch softer on very high-DPI screens, but that's a better
+    // trade than misaligned text, and kept even now that the markup is
+    // short — no reason to reintroduce the risk.
     return await html2canvas(container.firstElementChild as HTMLElement, {
       backgroundColor: '#ffffff',
       scale: 1,
