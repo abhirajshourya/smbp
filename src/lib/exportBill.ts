@@ -47,7 +47,11 @@ export function buildReceiptData(
     const discount = parseFloat(row.discount) || 0;
     const tax = parseFloat(row.tax) || 0;
     const tags: ReceiptTag[] = [];
-    if (discount > 0) tags.push({ label: `−${discount}% off`, tone: 'discount' });
+    // Plain ASCII hyphen, not a Unicode minus sign (U+2212) — jsPDF's built-in
+    // fonts use WinAnsiEncoding, which has no glyph for U+2212, and drawing an
+    // unmappable character throws off its width calculation, corrupting the
+    // glyph and the tag pill's width alongside it.
+    if (discount > 0) tags.push({ label: `-${discount}% off`, tone: 'discount' });
     if (tax > 0) tags.push({ label: `+${tax}% tax`, tone: 'tax' });
     return {
       name: row.item?.trim() || 'Item',

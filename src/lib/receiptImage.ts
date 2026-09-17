@@ -21,7 +21,7 @@ function escapeHtml(value: string) {
 
 function buildTag(tag: ReceiptTag): string {
   const [bg, color] = tag.tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
-  return `<span style="background:${bg};color:${color};border-radius:8px;padding:1px 5px;font-size:9.5px;margin-left:3px;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
+  return `<span style="background:${bg};color:${color};border-radius:8px;padding:2px 6px;font-size:9.5px;letter-spacing:0.01em;margin-left:6px;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
 }
 
 function buildReceiptMarkup(data: ReceiptData): string {

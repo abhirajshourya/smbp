@@ -49,17 +49,17 @@ export async function generateReceiptPdf(data: ReceiptData) {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
     const baselineY = cellY + cellHeight / 2 + 3.5;
-    let cursorX = cellX + pdf.getTextWidth(item.name) + 8;
+    let cursorX = cellX + pdf.getTextWidth(item.name) + 10;
 
     item.tags.forEach((tag) => {
       const [bg, fg] = tag.tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
       pdf.setFontSize(7.5);
-      const tagWidth = pdf.getTextWidth(tag.label) + 8;
+      const tagWidth = pdf.getTextWidth(tag.label) + 9;
       pdf.setFillColor(bg);
       pdf.roundedRect(cursorX, baselineY - 9, tagWidth, 11, 3, 3, 'F');
       pdf.setTextColor(fg);
-      pdf.text(tag.label, cursorX + 4, baselineY - 1);
-      cursorX += tagWidth + 4;
+      pdf.text(tag.label, cursorX + 4.5, baselineY - 1);
+      cursorX += tagWidth + 6;
     });
 
     pdf.setTextColor(TEXT);
