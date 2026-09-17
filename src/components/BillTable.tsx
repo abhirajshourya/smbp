@@ -244,7 +244,7 @@ export const BillTable = ({
         <div className="flex justify-end mb-2">
           <SplitModeToggle isCustomSplit={isCustomSplit} onChange={setIsCustomSplit} />
         </div>
-        <Table>
+        <Table containerClassName="max-h-[65vh] rounded-md border border-border">
           <TableHeader>
             <TableRow>
               {columns.map((col, index) => (
@@ -255,7 +255,7 @@ export const BillTable = ({
                         columnDefinitions[col]?.align === 'right' || isMemberColumn(col)
                           ? 'text-right'
                           : '',
-                        'font-semibold',
+                        'font-semibold sticky top-0 z-10 bg-background',
                         ['Sub-Total'].includes(col) ? 'text-foreground' : ''
                       )}
                       style={{
@@ -276,7 +276,9 @@ export const BillTable = ({
                   </ContextMenuContent>
                 </ContextMenu>
               ))}
-              <TableHead className="text-right">Remaining</TableHead>
+              <TableHead className="text-right sticky top-0 z-10 bg-background">
+                Remaining
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
