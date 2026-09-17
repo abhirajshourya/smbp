@@ -38,6 +38,7 @@ const useSplitManager = () => {
   const [columns, setColumns] = useState<string[]>(initialColumns);
   const [globalDiscount, setGlobalDiscount] = useState<number>(0);
   const [globalTax, setGlobalTax] = useState<number>(0);
+  const [billTotal, setBillTotal] = useState<string>('');
 
   const addRow = () => {
     const newRow: Row = { id: uuidv4() };
@@ -170,6 +171,14 @@ const useSplitManager = () => {
     ).toFixed(2);
   };
 
+  // How much of the receipt's printed total hasn't been itemized yet — lets
+  // a user type the total up front and watch it count down as they add
+  // items, catching a missed item or typo before it's the final surprise.
+  const calculateAmountLeftToItemize = () => {
+    const target = parseFloat(billTotal) || 0;
+    return round2(target - parseFloat(calculateTotal())).toFixed(2);
+  };
+
   const applyGlobalDiscount = (discount: number) => {
     setGlobalDiscount(discount);
     setRows(
@@ -205,6 +214,7 @@ const useSplitManager = () => {
     calculateAmountRemaining,
     calculateMemberShare,
     calculateMemberTotal,
+    calculateAmountLeftToItemize,
     setRows,
     setColumns,
     globalDiscount,
@@ -213,6 +223,8 @@ const useSplitManager = () => {
     globalTax,
     setGlobalTax,
     applyGlobalTax,
+    billTotal,
+    setBillTotal,
   };
 };
 

@@ -25,10 +25,13 @@ export default function Split() {
     calculateAmountRemaining,
     calculateMemberShare,
     calculateMemberTotal,
+    calculateAmountLeftToItemize,
     setRows,
     setColumns,
     applyGlobalDiscount,
     applyGlobalTax,
+    billTotal,
+    setBillTotal,
   } = useSplitManager();
 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -40,17 +43,22 @@ export default function Split() {
   useEffect(() => {
     const savedData = localStorage.getItem('splitData');
     if (savedData) {
-      const { savedRows, savedColumns } = JSON.parse(savedData);
+      const { savedRows, savedColumns, savedBillTotal } = JSON.parse(savedData);
       setRows(savedRows);
       setColumns(savedColumns);
+      if (savedBillTotal) setBillTotal(savedBillTotal);
       setIsDataLoaded(true);
     }
-  }, [setRows, setColumns]);
+  }, [setRows, setColumns, setBillTotal]);
 
   useEffect(() => {
-    const dataToSave = JSON.stringify({ savedRows: rows, savedColumns: columns });
+    const dataToSave = JSON.stringify({
+      savedRows: rows,
+      savedColumns: columns,
+      savedBillTotal: billTotal,
+    });
     localStorage.setItem('splitData', dataToSave);
-  }, [rows, columns]);
+  }, [rows, columns, billTotal]);
 
   const handleConfirmAddMember = () => {
     const name = newMemberName.trim();
@@ -72,6 +80,7 @@ export default function Split() {
     localStorage.removeItem('splitData');
     setRows([]);
     setColumns(['Item', 'Quantity', 'Unit', 'Price', 'Discount', 'Tax', 'Sub-Total']);
+    setBillTotal('');
     setIsDataLoaded(false);
   };
 
@@ -137,11 +146,46 @@ export default function Split() {
             <span className="font-semibold font-mono">${calculateTotal()}</span>
           </div>
         </div>
-        {rows.length > 0 && (
-          <div className="rounded-xl border border-border bg-card shadow-sm p-4 text-left sm:w-80 sm:self-end">
+        <div className="rounded-xl border border-border bg-card shadow-sm p-4 text-left sm:w-80 sm:self-end">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               Summary
             </p>
+            <div className="mb-4 pb-4 border-b border-border">
+              <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                Bill total
+              </label>
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-sm">$</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={billTotal}
+                  onChange={(e) => setBillTotal(e.target.value)}
+                  placeholder="e.g. 87.42"
+                  className="text-right"
+                />
+              </div>
+              {billTotal &&
+                (() => {
+                  const leftToItemize = parseFloat(calculateAmountLeftToItemize());
+                  return (
+                    <p
+                      className={clsx(
+                        'text-sm font-semibold mt-2 text-right',
+                        leftToItemize === 0 && 'text-success',
+                        leftToItemize > 0 && 'text-muted-foreground',
+                        leftToItemize < 0 && 'text-destructive'
+                      )}
+                    >
+                      {leftToItemize === 0
+                        ? 'Fully itemized'
+                        : leftToItemize > 0
+                          ? `$${leftToItemize.toFixed(2)} left to itemize`
+                          : `$${Math.abs(leftToItemize).toFixed(2)} over the bill total`}
+                    </p>
+                  );
+                })()}
+            </div>
             {memberColumns.map((col, index) => (
               <div
                 key={col}
@@ -212,7 +256,6 @@ export default function Split() {
               </div>
             </div>
           </div>
-        )}
         <BillTable
           rows={rows}
           columns={columns}
