@@ -21,7 +21,11 @@ function escapeHtml(value: string) {
 
 function buildTag(tag: ReceiptTag): string {
   const [bg, color] = tag.tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
-  return `<span style="background:${bg};color:${color};border-radius:8px;padding:2px 6px;font-size:9.5px;letter-spacing:0.01em;margin-left:6px;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
+  // display:inline-block + vertical-align:middle + line-height:1 keeps the
+  // pill's default baseline alignment from stacking its own padding under
+  // the item name's baseline, which made it look like it was floating low
+  // and out of proportion next to the text.
+  return `<span style="display:inline-block;vertical-align:middle;line-height:1;background:${bg};color:${color};border-radius:999px;padding:3px 7px;font-size:9.5px;letter-spacing:0.01em;margin-left:6px;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
 }
 
 function buildReceiptMarkup(data: ReceiptData): string {
