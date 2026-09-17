@@ -79,7 +79,15 @@ export async function generateReceiptPdf(data: ReceiptData) {
       lineWidth: { bottom: 1 },
       lineColor: TEXT,
     },
-    columnStyles: { 2: { halign: 'right' } },
+    // Pin "Split between" and "Amount" to widths that fit their actual
+    // content (names, dollar figures) instead of autoTable's default of
+    // stretching every column to fill the page — which left a wide gap of
+    // dead space between short member names and the amount. The Item column
+    // is left unset so it absorbs whatever width remains.
+    columnStyles: {
+      1: { cellWidth: 130 },
+      2: { cellWidth: 85, halign: 'right' },
+    },
     // jspdf-autotable only applies columnStyles to the body section, so the
     // "Amount" head cell needs its own right-align here or it sits flush
     // left while every value below it is right-aligned.
