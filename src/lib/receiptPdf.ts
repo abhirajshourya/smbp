@@ -80,6 +80,14 @@ export async function generateReceiptPdf(data: ReceiptData) {
       lineColor: TEXT,
     },
     columnStyles: { 2: { halign: 'right' } },
+    // jspdf-autotable only applies columnStyles to the body section, so the
+    // "Amount" head cell needs its own right-align here or it sits flush
+    // left while every value below it is right-aligned.
+    didParseCell: (hookData) => {
+      if (hookData.section === 'head' && hookData.column.index === 2) {
+        hookData.cell.styles.halign = 'right';
+      }
+    },
     didDrawCell: (hookData) => {
       if (hookData.section === 'body' && hookData.column.index === 0) {
         drawItemTags(hookData.row.index, hookData.cell.x, hookData.cell.y, hookData.cell.height);
