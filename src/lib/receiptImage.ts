@@ -21,11 +21,10 @@ function escapeHtml(value: string) {
 
 function buildTag(tag: ReceiptTag): string {
   const [bg, color] = tag.tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
-  // display:inline-block + vertical-align:middle + line-height:1 keeps the
-  // pill's default baseline alignment from stacking its own padding under
-  // the item name's baseline, which made it look like it was floating low
-  // and out of proportion next to the text.
-  return `<span style="display:inline-block;vertical-align:middle;line-height:1;background:${bg};color:${color};border-radius:999px;padding:3px 7px;font-size:9.5px;letter-spacing:0.01em;margin-left:6px;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
+  // A fixed pixel height + matching line-height (rather than padding-driven
+  // sizing) centers the label using plain line-box math, which is the most
+  // predictable technique across a live browser and html2canvas alike.
+  return `<span style="display:inline-block;background:${bg};color:${color};border-radius:999px;padding:0 7px;height:16px;line-height:16px;font-size:9.5px;letter-spacing:0.01em;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
 }
 
 function buildReceiptMarkup(data: ReceiptData): string {
@@ -33,7 +32,7 @@ function buildReceiptMarkup(data: ReceiptData): string {
     .map(
       (item) => `
         <tr>
-          <td style="padding:6px 0 0;">${escapeHtml(item.name)}${item.tags.map(buildTag).join('')}</td>
+          <td style="padding:6px 0 0;"><div style="display:flex;align-items:center;gap:6px;">${escapeHtml(item.name)}${item.tags.map(buildTag).join('')}</div></td>
           <td style="padding:6px 0 0;text-align:right;white-space:nowrap;">$${item.amount}</td>
         </tr>
         <tr>
@@ -94,9 +93,18 @@ async function renderToCanvas(data: ReceiptData): Promise<HTMLCanvasElement> {
   document.body.appendChild(container);
 
   try {
+    // scale:2 (kept here for a while for extra sharpness) is the actual
+    // cause of the tag pills rendering with their text sitting low —
+    // confirmed by isolating the exact same markup at both scales: at
+    // scale:2, html2canvas's own text-layout engine accumulates a growing
+    // vertical rounding error the further down the receipt an element sits
+    // (a row 4 items deep is visibly off; row 1 is fine), and doubling the
+    // internal render resolution doubles that drift. scale:1 removes it
+    // entirely for the exact same DOM/CSS. The output is a touch softer on
+    // very high-DPI screens, but that's a better trade than misaligned text.
     return await html2canvas(container.firstElementChild as HTMLElement, {
       backgroundColor: '#ffffff',
-      scale: 2,
+      scale: 1,
     });
   } finally {
     document.body.removeChild(container);
