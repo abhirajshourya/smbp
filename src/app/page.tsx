@@ -2,11 +2,16 @@ import { Button } from '@/components/ui/button';
 import {
   ArrowRight,
   Calculator,
+  FileDown,
+  FileText,
   Gift,
+  Image as ImageIcon,
   MessageSquare,
   Plane,
   Receipt,
+  Share2,
   Sparkles,
+  Table2,
   UtensilsCrossed,
   Users,
 } from 'lucide-react';
@@ -19,7 +24,14 @@ const features = [
     icon: Calculator,
     title: 'Itemized splitting',
     description:
-      'Add items with quantity, discount, and tax, then assign each person their exact share — down to the cent.',
+      'Add items with quantity, discount, and tax, set a target bill total and watch it count down as you go, then assign each person their exact share — down to the cent.',
+    badge: null,
+  },
+  {
+    icon: Share2,
+    title: 'Export & share',
+    description:
+      'Download a receipt-style PDF or image, export to CSV, or copy a plain-text summary to paste straight into a chat.',
     badge: null,
   },
   {
@@ -51,6 +63,13 @@ const steps = [
     title: 'See who owes what',
     description: 'Totals update instantly as you go. No manual math, no arguments over the tip.',
   },
+];
+
+const exportFormats = [
+  { icon: FileText, label: 'Plain-text summary, ready to paste into any chat' },
+  { icon: Table2, label: 'CSV, for spreadsheets and expense tracking' },
+  { icon: ImageIcon, label: 'Receipt-style image, easy to screenshot and send' },
+  { icon: FileDown, label: 'Receipt-style PDF, for printing or archiving' },
 ];
 
 const useCases = [
@@ -133,9 +152,9 @@ export default function Home() {
           <div className="rounded-2xl border border-white/30 bg-white/30 backdrop-blur-xl p-2 shadow-2xl shadow-black/[0.03]">
             <Image
               src="/screenshot-split-desktop.png"
-              alt="An itemized bill in Split My Bill Plz, showing three items split between three people with each share calculated automatically"
+              alt="An itemized bill in Split My Bill Plz, showing four items split between three people with each share calculated automatically"
               width={1400}
-              height={875}
+              height={500}
               className="rounded-xl w-full h-auto"
               priority
             />
@@ -160,7 +179,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid sm:grid-cols-3 gap-6 pb-24 w-full text-left">
+        <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 pb-24 w-full text-left">
           {features.map(({ icon: Icon, title, description, badge }) => (
             <div
               key={title}
@@ -180,6 +199,42 @@ export default function Home() {
               <p className="text-sm text-muted-foreground">{description}</p>
             </div>
           ))}
+        </section>
+
+        <section className="w-full pb-24">
+          <div className="rounded-2xl border border-white/30 bg-white/30 backdrop-blur-xl p-6 md:p-10 shadow-sm shadow-black/[0.02]">
+            <div className="grid md:grid-cols-2 gap-10 items-center text-left">
+              <div className="flex flex-col gap-4">
+                <h2 className="text-3xl font-semibold tracking-tight">Export your bill your way</h2>
+                <p className="text-muted-foreground">
+                  Once everyone&apos;s shares are settled, send it however works best — a
+                  receipt-style PDF or image for the group chat, a CSV for your records, or a
+                  quick text summary.
+                </p>
+                <ul className="flex flex-col gap-3 mt-2">
+                  {exportFormats.map(({ icon: Icon, label }) => (
+                    <li key={label} className="flex items-center gap-3 text-sm">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10 text-primary shrink-0">
+                        <Icon size={16} />
+                      </div>
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex justify-center">
+                <div className="rounded-xl border border-white/30 bg-white p-3 shadow-xl shadow-black/[0.06] max-w-xs w-full">
+                  <Image
+                    src="/screenshot-receipt-export.png"
+                    alt="A generated receipt image for a dinner bill, showing the total amount and each person's share"
+                    width={680}
+                    height={658}
+                    className="rounded-lg w-full h-auto"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="w-full pb-24">

@@ -1,17 +1,22 @@
-import type { ReceiptData, ReceiptTag } from './exportBill';
+import type { ReceiptData } from './exportBill';
 
 const BRAND = '#5048E5';
 const BRAND_LIGHT = '#8B85F0';
 const TEXT = '#1a1a1a';
 const MUTED = '#8a8a8a';
 const BORDER = '#e5e5e5';
-const CHIP_BG = '#E8E7FB';
-const CHIP_TEXT = '#3C3489';
-const DISCOUNT_BG = '#EAF3DE';
-const DISCOUNT_TEXT = '#3B6D11';
-const TAX_BG = '#FAEEDA';
-const TAX_TEXT = '#854F0B';
-const SERIF_STACK = 'var(--font-receipt-serif), Georgia, serif';
+// Deliberately not the app's --font-receipt-serif custom web font (Newsreader,
+// via next/font): confirmed by direct comparison (a real browser screenshot
+// vs. this same markup rasterized by html2canvas) that html2canvas mismeasures
+// that custom font's vertical metrics badly enough to throw off text-centering
+// math by ~10px, even though the live browser renders it correctly. Georgia is
+// a plain system serif with no custom @font-face, which html2canvas measures
+// reliably — worth the small loss of brand flourish in just this export.
+// Single-quoted font name: this stack gets interpolated straight into a
+// double-quoted HTML style="..." attribute, and a double-quoted "Times New
+// Roman" there would silently truncate the attribute at that quote — every
+// declaration after font-family would just be dropped by the HTML parser.
+const SERIF_STACK = "Georgia, 'Times New Roman', serif";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) =>
@@ -19,61 +24,50 @@ function escapeHtml(value: string) {
   );
 }
 
-function buildTag(tag: ReceiptTag): string {
-  const [bg, color] = tag.tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
-  // display:inline-block + vertical-align:middle + line-height:1 keeps the
-  // pill's default baseline alignment from stacking its own padding under
-  // the item name's baseline, which made it look like it was floating low
-  // and out of proportion next to the text.
-  return `<span style="display:inline-block;vertical-align:middle;line-height:1;background:${bg};color:${color};border-radius:999px;padding:3px 7px;font-size:9.5px;letter-spacing:0.01em;margin-left:6px;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
-}
-
+// The image export intentionally shows only the total and a plain
+// label/amount list per member, not the itemized list — the itemized view
+// lives on-screen and in the PDF/CSV exports. Per-item discount/tax tags
+// and pill-shaped member chips were both tried here and dropped: html2canvas
+// never rendered their small inline-block pills reliably once the receipt
+// got tall enough (see git history on this file). Plain flex rows with
+// align-items:baseline (no pills, no unset flex defaults) are the layout
+// that has actually held up under Playwright's pixel-level checks.
 function buildReceiptMarkup(data: ReceiptData): string {
-  const rows = data.items
+  const memberRows = data.memberTotals
     .map(
-      (item) => `
-        <tr>
-          <td style="padding:6px 0 0;">${escapeHtml(item.name)}${item.tags.map(buildTag).join('')}</td>
-          <td style="padding:6px 0 0;text-align:right;white-space:nowrap;">$${item.amount}</td>
-        </tr>
-        <tr>
-          <td style="padding:0 0 6px;color:${MUTED};font-size:10.5px;">${escapeHtml(item.splitWith)}</td>
-          <td></td>
-        </tr>`
+      (member, index) => `
+        <div data-testid="member-row" data-member-name="${escapeHtml(member.name)}" style="display:flex;align-items:baseline;justify-content:space-between;padding:8px 0;font-size:14px;${index > 0 ? `border-top:1px solid ${BORDER};` : ''}">
+          <span data-testid="member-name">${escapeHtml(member.name)}</span><span data-testid="member-amount">$${member.amount}</span>
+        </div>`
     )
     .join('');
 
-  const chips = data.memberTotals
-    .map(
-      (member) => `
-        <span style="background:${CHIP_BG};color:${CHIP_TEXT};border-radius:20px;padding:4px 10px;font-size:11px;font-weight:500;display:inline-block;">
-          ${escapeHtml(member.name)} $${member.amount}
-        </span>`
-    )
-    .join('');
-
+  // The brand row's span line-height matches the mark's 18px height so both
+  // flex children have identical box height. Even so, html2canvas paints
+  // text glyphs anchored near the bottom of their line box rather than
+  // centering the glyph ink within it (confirmed by comparing this exact
+  // markup's rendered pixels against a real browser screenshot of it —
+  // the live browser centers it correctly, html2canvas doesn't), so the
+  // solid-color mark — whose own ink faithfully fills its box, unlike
+  // text — needs a manual offset to visually land where html2canvas
+  // actually draws the text. This offset is only safe as a hardcoded
+  // constant because this row's content ("Split My Bill Plz" at a fixed
+  // font-size) never varies per bill.
   return `
     <div style="background:#ffffff;color:${TEXT};font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;width:340px;padding:24px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
-        <div style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg, ${BRAND}, ${BRAND_LIGHT});flex-shrink:0;"></div>
-        <span style="font-family:${SERIF_STACK};font-weight:500;font-size:17px;">Split My Bill Plz</span>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:2px;">
+        <div data-testid="brand-mark" style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg, ${BRAND}, ${BRAND_LIGHT});flex-shrink:0;margin-top:10.5px;"></div>
+        <span data-testid="brand-name" style="font-family:${SERIF_STACK};font-weight:500;font-size:17px;line-height:18px;">Split My Bill Plz</span>
       </div>
       <div style="color:${MUTED};font-size:12px;margin-bottom:16px;">${escapeHtml(data.date)}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
-        <tr style="border-bottom:1px solid ${BORDER};">
-          <td style="padding:4px 0;color:${MUTED};font-weight:500;">item</td>
-          <td style="padding:4px 0;color:${MUTED};font-weight:500;text-align:right;">amount</td>
-        </tr>
-        ${rows}
-      </table>
-      <div style="display:flex;justify-content:space-between;border-top:1px solid ${TEXT};margin-top:6px;padding-top:10px;font-weight:500;font-size:15px;">
-        <span>Total</span><span>$${data.total}</span>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid ${BORDER};margin-top:2px;padding-top:18px;font-weight:500;font-size:20px;">
+        <span data-testid="total-label">Total</span><span data-testid="total-amount">$${data.total}</span>
       </div>
       ${
         data.memberTotals.length > 0
-          ? `<div style="margin-top:16px;padding-top:14px;border-top:1px solid ${BORDER};">
-              <div style="color:${MUTED};font-size:11px;font-weight:500;margin-bottom:8px;">who owes what</div>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;">${chips}</div>
+          ? `<div style="margin-top:20px;padding-top:6px;border-top:1px solid ${BORDER};">
+              <div style="color:${MUTED};font-size:10px;font-weight:500;letter-spacing:0.02em;margin-top:10px;margin-bottom:2px;">WHO OWES WHAT</div>
+              ${memberRows}
             </div>`
           : ''
       }
@@ -94,9 +88,18 @@ async function renderToCanvas(data: ReceiptData): Promise<HTMLCanvasElement> {
   document.body.appendChild(container);
 
   try {
+    // scale:2 (tried earlier for extra sharpness) turned out to be the
+    // cause of a text-alignment bug in a previous version of this markup:
+    // html2canvas's own text-layout engine accumulates a growing vertical
+    // rounding error the further down the rendered content an element
+    // sits, and doubling the internal render resolution doubled that
+    // drift. scale:1 removes it entirely for the same DOM/CSS. The output
+    // is a touch softer on very high-DPI screens, but that's a better
+    // trade than misaligned text, and kept even now that the markup is
+    // short — no reason to reintroduce the risk.
     return await html2canvas(container.firstElementChild as HTMLElement, {
       backgroundColor: '#ffffff',
-      scale: 2,
+      scale: 1,
     });
   } finally {
     document.body.removeChild(container);

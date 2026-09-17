@@ -1,12 +1,27 @@
 import type { ReceiptData } from './exportBill';
 
 const BRAND = '#5048E5';
+const BRAND_LIGHT = '#8B85F0';
 const TEXT = '#1a1a1a';
 const MUTED = '#8a8a8a';
+const ON_BRAND = '#ffffff';
+const ON_BRAND_MUTED = '#CFCBF5';
+const ZEBRA = '#F7F7FB';
+const ZEBRA_BRAND = '#F1F0FC';
+const BORDER = '#e5e5e5';
 const DISCOUNT_BG = '#EAF3DE';
 const DISCOUNT_TEXT = '#3B6D11';
 const TAX_BG = '#FAEEDA';
 const TAX_TEXT = '#854F0B';
+
+// Each item row spans two text lines (name+tags, then who split it) inside
+// a fixed-height band. jsPDF draws exactly what it's told at explicit pt
+// coordinates — deterministic vector output, not a rasterizer reconstructing
+// layout from CSS — so a fixed row height is safe here without measuring
+// real text-wrap the way the html2canvas-based image export has to.
+const ROW_HEIGHT = 42;
+const NAME_BASELINE_OFFSET = 17;
+const SPLIT_BASELINE_OFFSET = 32;
 
 // Draws a real vector PDF (text, lines, a native table via jspdf-autotable) —
 // not a rasterized screenshot — so it stays crisp at any zoom and the text
@@ -20,116 +35,143 @@ export async function generateReceiptPdf(data: ReceiptData) {
   const pdf = new JsPdf({ unit: 'pt', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const marginX = 40;
-  let y = 52;
 
+  // Full-width branded header band, echoing the same mark/wordmark as the
+  // image export's header but as the page's dominant visual anchor instead
+  // of a small corner mark.
+  const bandHeight = 72;
   pdf.setFillColor(BRAND);
-  pdf.roundedRect(marginX, y - 14, 16, 16, 4, 4, 'F');
-  // "times" is one of jsPDF's three built-in fonts — a real serif with no
-  // custom font embedding needed, for an editorial touch on the brand name.
-  pdf.setFont('times', 'bolditalic');
-  pdf.setFontSize(15);
-  pdf.setTextColor(TEXT);
-  pdf.text('Split My Bill Plz', marginX + 24, y);
+  pdf.rect(0, 0, pageWidth, bandHeight, 'F');
+
+  // A plain white square read as an empty placeholder rather than a logo —
+  // an inset two-tone diamond (echoing the app's own BRAND/BRAND_LIGHT
+  // gradient mark, approximated here as a diagonal split since jsPDF has no
+  // simple linear-gradient fill) inside a white chip gives it an actual
+  // mark while still keeping enough white behind it to read against the
+  // band.
+  const markSize = 20;
+  const markX = marginX;
+  const markY = bandHeight / 2 - markSize / 2;
+  pdf.setFillColor(ON_BRAND);
+  pdf.roundedRect(markX, markY, markSize, markSize, 6, 6, 'F');
+  const inset = 4.5;
+  const ix = markX + inset;
+  const iy = markY + inset;
+  const isz = markSize - inset * 2;
+  pdf.setFillColor(BRAND_LIGHT);
+  pdf.roundedRect(ix, iy, isz, isz, 2.5, 2.5, 'F');
+  pdf.setFillColor(BRAND);
+  pdf.triangle(ix, iy, ix + isz, iy, ix + isz, iy + isz, 'F');
+
+  // "times" italic (not bold) — lighter and closer in feel to the app's
+  // actual medium-weight editorial serif than bold-italic read, which came
+  // across heavy-handed against the rest of the page's sans-serif type.
+  pdf.setFont('times', 'italic');
+  pdf.setFontSize(18);
+  pdf.setTextColor(ON_BRAND);
+  pdf.text('Split My Bill Plz', markX + markSize + 12, bandHeight / 2 + 6);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(10);
+  pdf.setTextColor(ON_BRAND_MUTED);
+  pdf.text(data.date, pageWidth - marginX, bandHeight / 2 + 4, { align: 'right' });
+
+  let y = bandHeight + 42;
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
   pdf.setTextColor(MUTED);
-  pdf.text(data.date, pageWidth - marginX, y, { align: 'right' });
+  pdf.text('ITEM', marginX, y);
+  pdf.text('AMOUNT', pageWidth - marginX, y, { align: 'right' });
+  y += 8;
+  pdf.setDrawColor(BORDER);
+  pdf.setLineWidth(1);
+  pdf.line(marginX, y, pageWidth - marginX, y);
+  y += 4;
 
-  y += 28;
-
-  // Draws each tag as a small filled rounded pill immediately after the item
-  // name's own text, mirroring the inline rate-tag look from the image
-  // export — autoTable cells only render one plain text run, so the pills
-  // have to be drawn manually once the cell's own text is in place.
-  const drawItemTags = (itemIndex: number, cellX: number, cellY: number, cellHeight: number) => {
-    const item = data.items[itemIndex];
-    if (!item || item.tags.length === 0) return;
-
+  // Draws one discount/tax pill immediately after the running cursor and
+  // returns the cursor's new x — same inline-after-the-name placement as
+  // the image export, just in jsPDF's own drawing primitives.
+  const drawTag = (label: string, tone: 'discount' | 'tax', cursorX: number, baselineY: number) => {
+    const [bg, fg] = tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    const baselineY = cellY + cellHeight / 2 + 3.5;
-    let cursorX = cellX + pdf.getTextWidth(item.name) + 10;
-
-    item.tags.forEach((tag) => {
-      const [bg, fg] = tag.tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
-      pdf.setFontSize(7.5);
-      const tagWidth = pdf.getTextWidth(tag.label) + 9;
-      pdf.setFillColor(bg);
-      pdf.roundedRect(cursorX, baselineY - 9, tagWidth, 11, 3, 3, 'F');
-      pdf.setTextColor(fg);
-      pdf.text(tag.label, cursorX + 4.5, baselineY - 1);
-      cursorX += tagWidth + 6;
-    });
-
-    pdf.setTextColor(TEXT);
-    pdf.setFontSize(10);
+    pdf.setFontSize(8);
+    const tagWidth = pdf.getTextWidth(label) + 12;
+    pdf.setFillColor(bg);
+    pdf.roundedRect(cursorX, baselineY - 10, tagWidth, 13, 6.5, 6.5, 'F');
+    pdf.setTextColor(fg);
+    pdf.text(label, cursorX + 6, baselineY - 1);
+    return cursorX + tagWidth + 6;
   };
 
-  autoTable(pdf, {
-    startY: y,
-    margin: { left: marginX, right: marginX },
-    head: [['Item', 'Split between', 'Amount']],
-    body: data.items.map((item) => [item.name, item.splitWith, `$${item.amount}`]),
-    theme: 'plain',
-    styles: { font: 'helvetica', fontSize: 10, textColor: TEXT, cellPadding: 6 },
-    headStyles: {
-      textColor: MUTED,
-      fontStyle: 'normal',
-      lineWidth: { bottom: 1 },
-      lineColor: TEXT,
-    },
-    // Pin "Split between" and "Amount" to widths that fit their actual
-    // content (names, dollar figures) instead of autoTable's default of
-    // stretching every column to fill the page — which left a wide gap of
-    // dead space between short member names and the amount. The Item column
-    // is left unset so it absorbs whatever width remains.
-    columnStyles: {
-      1: { cellWidth: 130 },
-      2: { cellWidth: 85, halign: 'right' },
-    },
-    // jspdf-autotable only applies columnStyles to the body section, so the
-    // "Amount" head cell needs its own right-align here or it sits flush
-    // left while every value below it is right-aligned.
-    didParseCell: (hookData) => {
-      if (hookData.section === 'head' && hookData.column.index === 2) {
-        hookData.cell.styles.halign = 'right';
-      }
-    },
-    didDrawCell: (hookData) => {
-      if (hookData.section === 'body' && hookData.column.index === 0) {
-        drawItemTags(hookData.row.index, hookData.cell.x, hookData.cell.y, hookData.cell.height);
-      }
-    },
+  // Items are drawn manually rather than through jspdf-autotable's cell
+  // model, because a table cell can't easily hold two differently-styled
+  // lines (the item name and, beneath it in smaller muted text, who split
+  // it) the way a hand-drawn two-line row can.
+  data.items.forEach((item, index) => {
+    const rowTop = y;
+    if (index % 2 === 1) {
+      pdf.setFillColor(ZEBRA);
+      pdf.rect(marginX - 8, rowTop, pageWidth - marginX * 2 + 16, ROW_HEIGHT, 'F');
+    }
+
+    const nameBaseline = rowTop + NAME_BASELINE_OFFSET;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10.5);
+    pdf.setTextColor(TEXT);
+    pdf.text(item.name, marginX, nameBaseline);
+
+    let cursorX = marginX + pdf.getTextWidth(item.name) + 10;
+    item.tags.forEach((tag) => {
+      cursorX = drawTag(tag.label, tag.tone, cursorX, nameBaseline);
+    });
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(MUTED);
+    pdf.text(item.splitWith, marginX, rowTop + SPLIT_BASELINE_OFFSET);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10.5);
+    pdf.setTextColor(TEXT);
+    pdf.text(`$${item.amount}`, pageWidth - marginX, rowTop + (NAME_BASELINE_OFFSET + SPLIT_BASELINE_OFFSET) / 2 + 3, {
+      align: 'right',
+    });
+
+    y += ROW_HEIGHT;
   });
 
-  const afterItemsY = (pdf as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  y += 12;
   pdf.setDrawColor(TEXT);
   pdf.setLineWidth(1);
-  pdf.line(marginX, afterItemsY, pageWidth - marginX, afterItemsY);
+  pdf.line(marginX, y, pageWidth - marginX, y);
+  y += 26;
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(13);
   pdf.setTextColor(TEXT);
-  pdf.text('Total', marginX, afterItemsY + 22);
-  pdf.text(`$${data.total}`, pageWidth - marginX, afterItemsY + 22, { align: 'right' });
+  pdf.text('Total', marginX, y);
+  pdf.text(`$${data.total}`, pageWidth - marginX, y, { align: 'right' });
 
-  let memberY = afterItemsY + 48;
+  y += 40;
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
   pdf.setTextColor(MUTED);
-  pdf.text('WHO OWES WHAT', marginX, memberY);
-  memberY += 12;
+  pdf.text('WHO OWES WHAT', marginX, y);
+  y += 16;
 
   if (data.memberTotals.length > 0) {
     autoTable(pdf, {
-      startY: memberY,
+      startY: y,
       margin: { left: marginX, right: marginX },
       body: data.memberTotals.map((member) => [member.name, `$${member.amount}`]),
       theme: 'plain',
       showHead: false,
-      styles: { font: 'helvetica', fontSize: 11, textColor: TEXT, cellPadding: 6 },
+      styles: { font: 'helvetica', fontSize: 11, textColor: TEXT, cellPadding: 10 },
       columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
+      // A light brand tint (rather than the items list's neutral gray)
+      // visually ties this section back to the header band.
+      alternateRowStyles: { fillColor: ZEBRA_BRAND },
     });
   }
 
