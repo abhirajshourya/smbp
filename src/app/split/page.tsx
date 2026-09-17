@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import useSplitManager, { isMemberColumn } from '@/hooks/useSplitManager';
 import { CustomNav } from '@/components/CustomNav';
 import { BillTable } from '@/components/BillTable';
+import { ExportMenu } from '@/components/ExportMenu';
+import { decodeShareLink } from '@/lib/exportBill';
 
 export default function Split() {
   const {
@@ -40,13 +42,38 @@ export default function Split() {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
 
+  // Handles both the normal localStorage load AND an incoming ?shared= link
+  // in one effect — both reads are synchronous, so deciding "does the user
+  // already have a bill?" here (rather than across two separate effects)
+  // avoids a stale-state race where a second effect closes over the
+  // pre-load empty rows/billTotal and skips the "replace?" confirmation.
   useEffect(() => {
+    const shared = new URLSearchParams(window.location.search).get('shared');
     const savedData = localStorage.getItem('splitData');
-    if (savedData) {
-      const { savedRows, savedColumns, savedBillTotal } = JSON.parse(savedData);
-      setRows(savedRows);
-      setColumns(savedColumns);
-      if (savedBillTotal) setBillTotal(savedBillTotal);
+    const saved = savedData ? JSON.parse(savedData) : null;
+    const hasExistingBill = Boolean(saved && (saved.savedRows?.length > 0 || saved.savedBillTotal));
+
+    if (shared) {
+      const sharedState = decodeShareLink(shared);
+      if (sharedState) {
+        const proceed =
+          !hasExistingBill || confirm('Load the shared bill? This will replace your current bill.');
+        if (proceed) {
+          setRows(sharedState.rows);
+          setColumns(sharedState.columns);
+          setBillTotal(sharedState.billTotal);
+          setIsDataLoaded(true);
+          window.history.replaceState(null, '', '/split');
+          return;
+        }
+      }
+      window.history.replaceState(null, '', '/split');
+    }
+
+    if (saved) {
+      setRows(saved.savedRows);
+      setColumns(saved.savedColumns);
+      if (saved.savedBillTotal) setBillTotal(saved.savedBillTotal);
       setIsDataLoaded(true);
     }
   }, [setRows, setColumns, setBillTotal]);
@@ -140,6 +167,11 @@ export default function Split() {
               <Trash2 />
             </Button>
           )}
+          <ExportMenu
+            rows={rows}
+            columns={columns}
+            calculations={{ calculateSubtotal, calculateMemberShare, calculateMemberTotal, calculateTotal }}
+          />
           <div className="flex-grow md:block hidden" />
           <div className="flex gap-2 text-2xl w-full md:w-auto">
             <span>Total:</span>
