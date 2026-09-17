@@ -34,7 +34,10 @@ export async function generateReceiptPdf(data: ReceiptData) {
 
   const pdf = new JsPdf({ unit: 'pt', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
   const marginX = 40;
+  const marginTop = 40;
+  const marginBottom = 50;
 
   // Full-width branded header band, echoing the same mark/wordmark as the
   // image export's header but as the page's dominant visual anchor instead
@@ -78,16 +81,33 @@ export async function generateReceiptPdf(data: ReceiptData) {
 
   let y = bandHeight + 42;
 
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  pdf.setTextColor(MUTED);
-  pdf.text('ITEM', marginX, y);
-  pdf.text('AMOUNT', pageWidth - marginX, y, { align: 'right' });
-  y += 8;
-  pdf.setDrawColor(BORDER);
-  pdf.setLineWidth(1);
-  pdf.line(marginX, y, pageWidth - marginX, y);
-  y += 4;
+  const drawItemsColumnHeader = () => {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(MUTED);
+    pdf.text('ITEM', marginX, y);
+    pdf.text('AMOUNT', pageWidth - marginX, y, { align: 'right' });
+    y += 8;
+    pdf.setDrawColor(BORDER);
+    pdf.setLineWidth(1);
+    pdf.line(marginX, y, pageWidth - marginX, y);
+    y += 4;
+  };
+  drawItemsColumnHeader();
+
+  // Content drawn manually (everything below, unlike jspdf-autotable's own
+  // sections) doesn't auto-paginate — past the page's bottom margin, it's
+  // simply invisible rather than pushed to a new page. Confirmed with a
+  // 50+ item bill: without this, items past what fit on page 1 disappeared
+  // entirely, and so did the Total line and "who owes what" heading, since
+  // their y-cursor had already run off every subsequent page too.
+  const ensureSpace = (neededHeight: number, continuationHeader?: () => void) => {
+    if (y + neededHeight > pageHeight - marginBottom) {
+      pdf.addPage();
+      y = marginTop;
+      continuationHeader?.();
+    }
+  };
 
   // Draws one discount/tax pill immediately after the running cursor and
   // returns the cursor's new x — same inline-after-the-name placement as
@@ -109,6 +129,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
   // lines (the item name and, beneath it in smaller muted text, who split
   // it) the way a hand-drawn two-line row can.
   data.items.forEach((item, index) => {
+    ensureSpace(ROW_HEIGHT, drawItemsColumnHeader);
     const rowTop = y;
     if (index % 2 === 1) {
       pdf.setFillColor(ZEBRA);
@@ -141,6 +162,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
     y += ROW_HEIGHT;
   });
 
+  ensureSpace(12 + 1 + 26 + 13);
   y += 12;
   pdf.setDrawColor(TEXT);
   pdf.setLineWidth(1);
@@ -153,6 +175,7 @@ export async function generateReceiptPdf(data: ReceiptData) {
   pdf.text('Total', marginX, y);
   pdf.text(`$${data.total}`, pageWidth - marginX, y, { align: 'right' });
 
+  ensureSpace(40 + 16);
   y += 40;
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
