@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Check } from 'lucide-react';
 import clsx from 'clsx';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,26 @@ export default function Split() {
   const [taxInput, setTaxInput] = useState<string>('');
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
+
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarHeight, setToolbarHeight] = useState(0);
+
+  // The toolbar's height isn't constant — its "Total" block wraps onto its
+  // own row through the whole sm:-md: range, and member buttons can wrap it
+  // further — so the sidebar's sticky offset has to track it live rather
+  // than assume a fixed toolbar height.
+  useLayoutEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const measure = () => setToolbarHeight(el.getBoundingClientRect().height);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const NAV_HEIGHT = 57; // matches the toolbar's own `top-[57px]`
+  const sidebarTop = NAV_HEIGHT + toolbarHeight;
 
   // Handles both the normal localStorage load AND an incoming ?shared= link
   // in one effect — both reads are synchronous, so deciding "does the user
@@ -131,7 +151,10 @@ export default function Split() {
     <div>
       <CustomNav />
       <div className="p-6 flex flex-col text-center min-h-screen gap-4">
-        <div className="sticky top-[57px] z-40 -mx-6 px-6 py-2 bg-background/90 backdrop-blur-md border-b border-border flex gap-4 items-center flex-wrap">
+        <div
+          ref={toolbarRef}
+          className="sticky top-[57px] z-40 -mx-6 px-6 py-2 bg-background/90 backdrop-blur-md border-b border-border flex gap-4 items-center flex-wrap"
+        >
           <Button onClick={addRow} className="flex gap-2 w-fit" variant="outline">
             <Plus /> Item
           </Button>
@@ -178,7 +201,11 @@ export default function Split() {
             <span className="font-semibold font-mono">${calculateTotal()}</span>
           </div>
         </div>
-        <div className="rounded-xl border border-border bg-card shadow-sm p-4 text-left sm:w-80 sm:self-end">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_320px] gap-4 items-start">
+        <div
+          className="rounded-xl border border-border bg-card shadow-sm p-4 text-left sm:order-2 sm:sticky"
+          style={{ top: sidebarTop }}
+        >
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               Summary
             </p>
@@ -288,19 +315,22 @@ export default function Split() {
               </div>
             </div>
           </div>
-        <BillTable
-          rows={rows}
-          columns={columns}
-          units={units}
-          updateRow={updateRow}
-          deleteRow={deleteRow}
-          deleteColumn={deleteColumn}
-          toggleMemberInclusion={toggleMemberInclusion}
-          calculateSubtotal={calculateSubtotal}
-          calculateAmountRemaining={calculateAmountRemaining}
-          calculateMemberShare={calculateMemberShare}
-          calculateMemberTotal={calculateMemberTotal}
-        />
+        <div className="min-w-0 flex flex-col">
+          <BillTable
+            rows={rows}
+            columns={columns}
+            units={units}
+            updateRow={updateRow}
+            deleteRow={deleteRow}
+            deleteColumn={deleteColumn}
+            toggleMemberInclusion={toggleMemberInclusion}
+            calculateSubtotal={calculateSubtotal}
+            calculateAmountRemaining={calculateAmountRemaining}
+            calculateMemberShare={calculateMemberShare}
+            calculateMemberTotal={calculateMemberTotal}
+          />
+        </div>
+        </div>
       </div>
     </div>
   );
