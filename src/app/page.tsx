@@ -152,9 +152,9 @@ export default function Home() {
           <div className="rounded-2xl border border-white/30 bg-white/30 backdrop-blur-xl p-2 shadow-2xl shadow-black/[0.03]">
             <Image
               src="/screenshot-split-desktop.png"
-              alt="An itemized bill in Split My Bill Plz, showing three items split between three people with each share calculated automatically"
+              alt="An itemized bill in Split My Bill Plz, showing four items split between three people with each share calculated automatically"
               width={1400}
-              height={875}
+              height={500}
               className="rounded-xl w-full h-auto"
               priority
             />
