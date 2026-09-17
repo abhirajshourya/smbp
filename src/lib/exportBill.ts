@@ -13,10 +13,16 @@ export type ShareableBillState = {
   billTotal: string;
 };
 
+export type ReceiptTag = {
+  label: string;
+  tone: 'discount' | 'tax';
+};
+
 export type ReceiptItem = {
   name: string;
   amount: string;
   splitWith: string;
+  tags: ReceiptTag[];
 };
 
 export type ReceiptData = {
@@ -38,10 +44,16 @@ export function buildReceiptData(
 
   const items = rows.map((row) => {
     const splitWith = memberColumns.filter((col) => parseFloat(calculateMemberShare(row, col)) > 0);
+    const discount = parseFloat(row.discount) || 0;
+    const tax = parseFloat(row.tax) || 0;
+    const tags: ReceiptTag[] = [];
+    if (discount > 0) tags.push({ label: `−${discount}% off`, tone: 'discount' });
+    if (tax > 0) tags.push({ label: `+${tax}% tax`, tone: 'tax' });
     return {
       name: row.item?.trim() || 'Item',
       amount: calculateSubtotal(row),
       splitWith: splitWith.length > 0 ? splitWith.join(', ') : '—',
+      tags,
     };
   });
 

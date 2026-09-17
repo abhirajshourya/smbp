@@ -1,4 +1,4 @@
-import type { ReceiptData } from './exportBill';
+import type { ReceiptData, ReceiptTag } from './exportBill';
 
 const BRAND = '#5048E5';
 const BRAND_LIGHT = '#8B85F0';
@@ -7,6 +7,11 @@ const MUTED = '#8a8a8a';
 const BORDER = '#e5e5e5';
 const CHIP_BG = '#E8E7FB';
 const CHIP_TEXT = '#3C3489';
+const DISCOUNT_BG = '#EAF3DE';
+const DISCOUNT_TEXT = '#3B6D11';
+const TAX_BG = '#FAEEDA';
+const TAX_TEXT = '#854F0B';
+const SERIF_STACK = 'var(--font-receipt-serif), Georgia, serif';
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) =>
@@ -14,13 +19,18 @@ function escapeHtml(value: string) {
   );
 }
 
+function buildTag(tag: ReceiptTag): string {
+  const [bg, color] = tag.tone === 'discount' ? [DISCOUNT_BG, DISCOUNT_TEXT] : [TAX_BG, TAX_TEXT];
+  return `<span style="background:${bg};color:${color};border-radius:8px;padding:1px 5px;font-size:9.5px;margin-left:3px;white-space:nowrap;">${escapeHtml(tag.label)}</span>`;
+}
+
 function buildReceiptMarkup(data: ReceiptData): string {
   const rows = data.items
     .map(
       (item) => `
         <tr>
-          <td style="padding:6px 0 0;">${escapeHtml(item.name)}</td>
-          <td style="padding:6px 0 0;text-align:right;">$${item.amount}</td>
+          <td style="padding:6px 0 0;">${escapeHtml(item.name)}${item.tags.map(buildTag).join('')}</td>
+          <td style="padding:6px 0 0;text-align:right;white-space:nowrap;">$${item.amount}</td>
         </tr>
         <tr>
           <td style="padding:0 0 6px;color:${MUTED};font-size:10.5px;">${escapeHtml(item.splitWith)}</td>
@@ -42,7 +52,7 @@ function buildReceiptMarkup(data: ReceiptData): string {
     <div style="background:#ffffff;color:${TEXT};font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;width:340px;padding:24px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
         <div style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg, ${BRAND}, ${BRAND_LIGHT});flex-shrink:0;"></div>
-        <span style="font-weight:500;font-size:14px;">Split My Bill Plz</span>
+        <span style="font-family:${SERIF_STACK};font-weight:500;font-size:17px;">Split My Bill Plz</span>
       </div>
       <div style="color:${MUTED};font-size:12px;margin-bottom:16px;">${escapeHtml(data.date)}</div>
       <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
