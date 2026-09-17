@@ -1,11 +1,13 @@
 import type { ReceiptData } from './exportBill';
 
 const BRAND = '#5048E5';
+const BRAND_LIGHT = '#8B85F0';
 const TEXT = '#1a1a1a';
 const MUTED = '#8a8a8a';
 const ON_BRAND = '#ffffff';
 const ON_BRAND_MUTED = '#CFCBF5';
 const ZEBRA = '#F7F7FB';
+const ZEBRA_BRAND = '#F1F0FC';
 const BORDER = '#e5e5e5';
 const DISCOUNT_BG = '#EAF3DE';
 const DISCOUNT_TEXT = '#3B6D11';
@@ -17,9 +19,9 @@ const TAX_TEXT = '#854F0B';
 // coordinates — deterministic vector output, not a rasterizer reconstructing
 // layout from CSS — so a fixed row height is safe here without measuring
 // real text-wrap the way the html2canvas-based image export has to.
-const ROW_HEIGHT = 36;
-const NAME_BASELINE_OFFSET = 14;
-const SPLIT_BASELINE_OFFSET = 28;
+const ROW_HEIGHT = 42;
+const NAME_BASELINE_OFFSET = 17;
+const SPLIT_BASELINE_OFFSET = 32;
 
 // Draws a real vector PDF (text, lines, a native table via jspdf-autotable) —
 // not a rasterized screenshot — so it stays crisp at any zoom and the text
@@ -41,23 +43,40 @@ export async function generateReceiptPdf(data: ReceiptData) {
   pdf.setFillColor(BRAND);
   pdf.rect(0, 0, pageWidth, bandHeight, 'F');
 
-  const markSize = 18;
+  // A plain white square read as an empty placeholder rather than a logo —
+  // an inset two-tone diamond (echoing the app's own BRAND/BRAND_LIGHT
+  // gradient mark, approximated here as a diagonal split since jsPDF has no
+  // simple linear-gradient fill) inside a white chip gives it an actual
+  // mark while still keeping enough white behind it to read against the
+  // band.
+  const markSize = 20;
+  const markX = marginX;
+  const markY = bandHeight / 2 - markSize / 2;
   pdf.setFillColor(ON_BRAND);
-  pdf.roundedRect(marginX, bandHeight / 2 - markSize / 2, markSize, markSize, 5, 5, 'F');
+  pdf.roundedRect(markX, markY, markSize, markSize, 6, 6, 'F');
+  const inset = 4.5;
+  const ix = markX + inset;
+  const iy = markY + inset;
+  const isz = markSize - inset * 2;
+  pdf.setFillColor(BRAND_LIGHT);
+  pdf.roundedRect(ix, iy, isz, isz, 2.5, 2.5, 'F');
+  pdf.setFillColor(BRAND);
+  pdf.triangle(ix, iy, ix + isz, iy, ix + isz, iy + isz, 'F');
 
-  // "times" is one of jsPDF's three built-in fonts — a real serif with no
-  // custom font embedding needed, for an editorial touch on the brand name.
-  pdf.setFont('times', 'bolditalic');
-  pdf.setFontSize(17);
+  // "times" italic (not bold) — lighter and closer in feel to the app's
+  // actual medium-weight editorial serif than bold-italic read, which came
+  // across heavy-handed against the rest of the page's sans-serif type.
+  pdf.setFont('times', 'italic');
+  pdf.setFontSize(18);
   pdf.setTextColor(ON_BRAND);
-  pdf.text('Split My Bill Plz', marginX + markSize + 10, bandHeight / 2 + 6);
+  pdf.text('Split My Bill Plz', markX + markSize + 12, bandHeight / 2 + 6);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(10);
   pdf.setTextColor(ON_BRAND_MUTED);
   pdf.text(data.date, pageWidth - marginX, bandHeight / 2 + 4, { align: 'right' });
 
-  let y = bandHeight + 36;
+  let y = bandHeight + 42;
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
@@ -122,10 +141,11 @@ export async function generateReceiptPdf(data: ReceiptData) {
     y += ROW_HEIGHT;
   });
 
+  y += 12;
   pdf.setDrawColor(TEXT);
   pdf.setLineWidth(1);
   pdf.line(marginX, y, pageWidth - marginX, y);
-  y += 22;
+  y += 26;
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(13);
@@ -133,12 +153,12 @@ export async function generateReceiptPdf(data: ReceiptData) {
   pdf.text('Total', marginX, y);
   pdf.text(`$${data.total}`, pageWidth - marginX, y, { align: 'right' });
 
-  y += 34;
+  y += 40;
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
   pdf.setTextColor(MUTED);
   pdf.text('WHO OWES WHAT', marginX, y);
-  y += 10;
+  y += 16;
 
   if (data.memberTotals.length > 0) {
     autoTable(pdf, {
@@ -147,9 +167,11 @@ export async function generateReceiptPdf(data: ReceiptData) {
       body: data.memberTotals.map((member) => [member.name, `$${member.amount}`]),
       theme: 'plain',
       showHead: false,
-      styles: { font: 'helvetica', fontSize: 11, textColor: TEXT, cellPadding: 8 },
+      styles: { font: 'helvetica', fontSize: 11, textColor: TEXT, cellPadding: 10 },
       columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
-      alternateRowStyles: { fillColor: ZEBRA },
+      // A light brand tint (rather than the items list's neutral gray)
+      // visually ties this section back to the header band.
+      alternateRowStyles: { fillColor: ZEBRA_BRAND },
     });
   }
 
