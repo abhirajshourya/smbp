@@ -10,6 +10,23 @@ const nextConfig: NextConfig = {
     // "typecheck" script/CI step) - just Next's own integration doesn't yet.
     ignoreBuildErrors: true,
   },
+  async headers() {
+    return [
+      {
+        // Without an explicit no-cache the browser may serve the worker from
+        // its own HTTP cache, which pins users to whatever sw.js they first
+        // received — the classic way a service worker becomes unupdatable.
+        // Everything the worker caches is versioned, but only if the worker
+        // itself can change.
+        source: '/sw.js',
+        headers: [
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
