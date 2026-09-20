@@ -10,10 +10,12 @@ import {
   Plane,
   Receipt,
   Share2,
+  Smartphone,
   Sparkles,
   Table2,
   UtensilsCrossed,
   Users,
+  WifiOff,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -84,7 +86,12 @@ const faqs = [
   {
     question: 'Do I need to create an account?',
     answer:
-      'No. Split My Bill Plz works instantly in your browser — no sign-up, no email, nothing to install.',
+      'No. Split My Bill Plz works instantly in your browser — no sign-up, no email, nothing to download.',
+  },
+  {
+    question: 'Does it work without internet?',
+    answer:
+      'Yes. Once the page has loaded a single time, splitting a bill needs no connection at all — handy on restaurant wifi. You can also add it to your home screen from your browser’s menu and it opens like any other app.',
   },
   {
     question: 'Is my data private?',
@@ -176,6 +183,19 @@ export default function Home() {
               </Button>
             </Link>
           </div>
+          {/* States the capability rather than asking for the install. There's
+              no "Install app" button here on purpose — see the note in
+              manifest.ts. */}
+          <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <WifiOff size={13} />
+              Works offline
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Smartphone size={13} />
+              Add it to your home screen
+            </span>
+          </p>
         </section>
 
         <section

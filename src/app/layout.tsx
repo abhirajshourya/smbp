@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { Footer } from '@/components/Footer';
+import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import { siteConfig } from '@/lib/siteConfig';
 
 const geistSans = Geist({
@@ -90,6 +91,7 @@ export default function RootLayout({
         <div>{children}</div>
         <Footer />
         <Analytics />
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );

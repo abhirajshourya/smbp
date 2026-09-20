@@ -32,6 +32,11 @@ export const siteConfig = {
   // (hsl(243 75% 59%)). Hard-coded as hex because neither the OG image
   // renderer nor the theme-color meta tag can read CSS custom properties.
   brandColor: '#5048E5',
+  // The lighter half of the logo mark's diagonal split. A literal hex rather
+  // than the brand colour at reduced opacity, so the mark renders identically
+  // whatever sits behind it — src/app/icon.svg has always used this value and
+  // the generated marks now match it exactly.
+  brandLight: '#8B85F0',
   // --background resolved for each theme, for the theme-color meta tag so the
   // mobile browser chrome matches the page instead of flashing white.
   backgroundColor: '#F9FAFB',
