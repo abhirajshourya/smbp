@@ -18,6 +18,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { CustomNav } from '@/components/CustomNav';
+import { siteConfig } from '@/lib/siteConfig';
 
 const features = [
   {
@@ -112,8 +113,40 @@ function GradientBackdrop() {
 }
 
 export default function Home() {
+  // Structured data for search engines and AI crawlers. `offers` with a zero
+  // price is what marks a free tool as free in rich results — omitting it reads
+  // as "price unknown" rather than "free".
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: siteConfig.name,
+    url: siteConfig.url,
+    description: siteConfig.description,
+    applicationCategory: 'FinanceApplication',
+    operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+    author: {
+      '@type': 'Person',
+      name: 'Abhiraj Shourya',
+      url: 'https://github.com/abhirajshourya',
+    },
+  };
+
   return (
     <div className="relative">
+      {/* The `<` escape guards against HTML-injection if any of the values
+          above ever become dynamic — see Next's JSON-LD guide. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
+        }}
+      />
       <GradientBackdrop />
       <div className="relative z-10">
       <CustomNav />
