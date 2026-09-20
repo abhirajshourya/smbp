@@ -51,14 +51,24 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. The app hot
 Other scripts:
 
 ```sh
-npm run build   # production build
-npm run start   # run the production build
-npm run lint    # lint the project
+npm run build      # production build
+npm run start      # run the production build
+npm run typecheck  # type-check without emitting
+npm run test:e2e   # Playwright end-to-end tests
 ```
 
 ## Contributing
 
 Contributions are welcome! Please open an issue to discuss a change before submitting a pull request, especially for anything beyond a small fix.
+
+There is intentionally no ESLint setup. This project runs TypeScript 7, which
+replaced the classic JavaScript Compiler API with the native `tsgo` binary, and
+`typescript-eslint` cannot parse TypeScript 7 at all — every version of
+`eslint-config-next` depends on it, so ESLint could not read a single file in
+`src/`. Rather than keep a config that errors on startup, linting was removed;
+`npm run typecheck` is the check that actually runs. See
+[typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)
+for upstream progress.
 
 ## License
 

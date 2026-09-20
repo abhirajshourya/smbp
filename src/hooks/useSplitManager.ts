@@ -76,7 +76,8 @@ const useSplitManager = () => {
     setColumns(updatedColumns);
     setRows(
       rows.map((row) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // Destructure-and-discard: pulls the deleted column's key out of the
+        // row so `rest` is the row without it. `_` is deliberately unused.
         const { [toKey(column)]: _, ...rest } = row;
         return { id: row.id, ...rest };
       })
